@@ -1,11 +1,16 @@
 {
   "name": "basket-live-elite-cloud",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "Plataforma educativa de estadísticas de baloncesto alojable en la nube",
+  "description": "Estadísticas avanzadas de baloncesto, análisis en vivo, OCR, seguimiento por pantalla y Criterio de Kelly (educativo)",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=22.0.0 <23.0.0" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/model.test.js"
+  },
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
     "express": "^4.21.2",

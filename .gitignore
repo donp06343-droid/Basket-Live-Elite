@@ -1,4 +1,11 @@
+# Dependencies
 node_modules/
+
+# Local data / SQLite
 data/
-.env
-*.sqlite
+*.db
+*.db-journal
+
+# Logs / OS
+*.log
+.DS_Store
