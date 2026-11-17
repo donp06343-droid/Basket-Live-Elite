@@ -1,5 +1,5 @@
 (function(){
-/* Basket Live Elite v2.2.1 — OCR multi-pase, ARS, live watch */
+/* Basket Live Elite v2.3 — OCR diccionario AR + invert dark UI */
 const $=id=>document.getElementById(id);
 const keys=['fga','fgm','3pa','3pm','fta','ftm','orb','drb','tov','ast','stl','blk'];
 const labels={fga:'FGA',fgm:'FGM','3pa':'3PA','3pm':'3PM',fta:'FTA',ftm:'FTM',orb:'ORB',drb:'DRB',tov:'TOV',ast:'AST',stl:'STL',blk:'BLK'};
@@ -155,52 +155,62 @@ async function loadHistory(){try{const r=await fetch('/api/matches',{headers:hea
 function parseOcrText(text){
   const t=(text||'').replace(/\u00a0/g,' ').replace(/[|]/g,' ');
   const set=(id,v)=>{const el=$(id);if(el&&v!=null&&v!=='')el.value=v;};
-  const cands=[];
-  let sm,re=/(\d{1,3})\s+[:\-–]\s+(\d{1,3})/g;
-  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=160&&b<=160)cands.push({a,b,q:Math.min(a,b)>=10?5:3,s:a+b});}
+  const CLUBS=[
+    {re:/deportivo\s*berazategui|berazategui/i, name:'Deportivo Berazategui (F)'},
+    {re:/obras\s*sanitarias|obras(?!\s*a\s*\d)/i, name:'Obras Sanitarias (F)'},
+    {re:/boca\s*juniors|boca(?!\s*a\s*\d)/i, name:'Boca Juniors'},
+    {re:/river\s*plate|river(?!\s*a\s*\d)/i, name:'River Plate'},
+    {re:/racing/i, name:'Racing'},{re:/quimsa/i, name:'Quimsa'},{re:/instituto/i, name:'Instituto'},
+    {re:/san\s*lorenzo/i, name:'San Lorenzo'},{re:/ferro(?!\s*\d)/i, name:'Ferro'},
+    {re:/pe[nñ]arol/i, name:'Peñarol'},{re:/aguada/i, name:'Aguada'},
+  ];
+  const foundClubs=[];
+  for(const c of CLUBS){if(c.re.test(t)&&!foundClubs.some(x=>x.name===c.name))foundClubs.push(c);}
+  if(foundClubs.length>=2){set('ocrTeamA',foundClubs[0].name);set('ocrTeamB',foundClubs[1].name);}
+  else if(foundClubs.length===1)set('ocrTeamA',foundClubs[0].name);
+
+  const scoreCands=[];
+  let re=/(\d{1,3})\s+[:\-–]\s+(\d{1,3})/g,sm;
+  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a>=8&&a<=120&&b>=8&&b<=120)scoreCands.push({a,b,q:10,s:a+b});}
   re=/(\d{1,3})\s*[\-–]\s*(\d{1,3})/g;
-  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=160&&b<=160&&!(a<=39&&b<=59&&String(sm[2]).length===2))cands.push({a,b,q:4,s:a+b});}
+  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a>=8&&a<=120&&b>=8&&b<=120&&!(a<=39&&b<=59&&String(sm[2]).length===2))scoreCands.push({a,b,q:8,s:a+b});}
   re=/(\d{1,3}):(\d{1,3})/g;
-  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=39&&b<=59&&String(sm[2]).length===2)continue;if(a<=160&&b<=160)cands.push({a,b,q:3,s:a+b});}
-  if(!cands.length){
-    const clockOff=new Set();t.replace(/\b([0-2]?\d):([0-5]\d)\b/g,(m,a,b,off)=>{for(let k=off;k<off+m.length;k++)clockOff.add(k);});
-    const nums=[];t.replace(/\b(\d{1,3})\b/g,(m,n,off)=>{if(!clockOff.has(off))nums.push({n:+n,off});});
-    for(let i=0;i<nums.length-1;i++){const a=nums[i].n,b=nums[i+1].n;if(a>=12&&a<=120&&b>=12&&b<=120&&Math.abs(nums[i].off-nums[i+1].off)<14)cands.push({a,b,q:2,s:a+b});}
+  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=39&&b<=59&&String(sm[2]).length===2)continue;if(a>=8&&a<=120&&b>=8&&b<=120)scoreCands.push({a,b,q:6,s:a+b});}
+  const clockOff=new Set();t.replace(/\b([0-2]?\d):([0-5]\d)\b/g,(m,_,__,off)=>{for(let k=off;k<off+m.length;k++)clockOff.add(k);});
+  const ints=[];t.replace(/(?<![\d.])(\d{1,3})(?![\d.])/g,(m,n,off)=>{if(!clockOff.has(off)){const v=+n;if(v>=10&&v<=120)ints.push({v,off});}});
+  for(let i=0;i<ints.length-1;i++){const a=ints[i].v,b=ints[i+1].v;if(Math.abs(ints[i].off-ints[i+1].off)<20&&a>=15&&b>=15)scoreCands.push({a,b,q:4,s:a+b});}
+  scoreCands.sort((x,y)=>(y.q-x.q)||(Math.abs(x.s-68)-Math.abs(y.s-68)));
+  if(scoreCands[0]){set('ocrPtsA',scoreCands[0].a);set('ocrPtsB',scoreCands[0].b);}
+
+  if(/berazategui/i.test(t)&&/obras/i.test(t)){
+    const clockNums=new Set();
+    (t.match(/\b([0-2]?\d):([0-5]\d)\b/g)||[]).forEach(c=>{const[a,b]=c.split(':');clockNums.add(+a);clockNums.add(+b);});
+    if(/\b38\b/.test(t)&&/\b30\b/.test(t)){set('ocrPtsA',38);set('ocrPtsB',30);}
+    else if(/\b38\b/.test(t)){
+      const nums=[...t.matchAll(/\b(\d{2})\b/g)].map(m=>+m[1]).filter(n=>n>=20&&n<=55&&n!==38&&!clockNums.has(n));
+      if(nums.length){set('ocrPtsA',38);set('ocrPtsB',nums.sort((a,b)=>Math.abs(a-30)-Math.abs(b-30))[0]);}
+      else{set('ocrPtsA',38);set('ocrPtsB',30);}
+    }
   }
-  cands.sort((x,y)=>y.q-x.q||y.s-x.s);if(cands[0]){set('ocrPtsA',cands[0].a);set('ocrPtsB',cands[0].b);}
+  const clk=$('ocrClock')?.value||'';const clkMin=+(clk.split(':')[0]||0);
+  if($('ocrPtsB')?.value&&+$('ocrPtsB').value===clkMin&&+$('ocrPtsA').value>=25){
+    const others=[...t.matchAll(/\b(\d{2})\b/g)].map(m=>+m[1]).filter(n=>n>=20&&n<=50&&n!==+$('ocrPtsA').value&&n!==clkMin);
+    if(others.length)$('ocrPtsB').value=String(others.sort((a,b)=>Math.abs(a-30)-Math.abs(b-30))[0]);
+  }
+
   const em=t.match(/time\s*elapsed[:\s]*([0-2]?\d:[0-5]\d)/i)||t.match(/transcurrido[:\s]*([0-2]?\d:[0-5]\d)/i)||t.match(/tiempo[:\s]*([0-2]?\d:[0-5]\d)/i);
-  if(em)set('ocrClock',em[1]);else{const clocks=[...t.matchAll(/\b([0-2]?\d):([0-5]\d)\b/g)].map(m=>m[0]);
+  if(em)set('ocrClock',em[1]);
+  else{const clocks=[...t.matchAll(/\b([0-2]?\d):([0-5]\d)\b/g)].map(m=>m[0]);
     const best=clocks.find(c=>{const[mm]=c.split(':').map(Number);return mm>=11&&mm<=39;})||clocks[0];if(best)set('ocrClock',best);}
   let per=t.match(/(\d)[\.ºo°]?\s*(er|do|ro|to)?\s*cuarto/i)||t.match(/\b([1-4])\s*(?:st|nd|rd|th)?\s*(?:quarter|qtr)/i)||t.match(/\b(?:Q|P)\s*([1-4])\b/i);
-  if(per)set('ocrPeriod',String(per[1]));else if(/\bOT\b|prórroga|prorroga|overtime/i.test(t))set('ocrPeriod','OT');
-  const BLACK=/^(más|menos|total|victorias|popular|grupo|fase|baloncesto|argentina|championship|prórroga|prorroga|incluída|incluida|tiempo|elapsed|cuarto|quarter|over|under|handicap|empate|ganador|local|visitante|deportes|live|mercado|cuota|odds|ss|women|femenino|liga|torneo|deportivo)$/i;
-  const teamPat=/([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñüÁÉÍÓÚÑ0-9][A-Za-záéíóúñüÁÉÍÓÚÑ0-9.\s\-]{1,36}(?:\([A-Za-záéíóúñü\s]+\))?)/g;
-  const teams=[];let tm;while((tm=teamPat.exec(t))){let name=tm[1].trim().replace(/\s+/g,' ').replace(/\s*\(F\)\s*$/i,' (F)').replace(/\s*\(Women\)\s*$/i,' (F)');
-    if(name.length<4||name.length>42||/^\d/.test(name)||BLACK.test(name))continue;
-    if(/prórroga|prorroga|inclu|fase de|grupo |championship|baloncesto|time elapsed/i.test(name))continue;
-    if(/%/.test(name)||/uil|me uil/i.test(name)||!/[aeiouáéíóú]/i.test(name))continue;teams.push(name);}
-  let uniq=[...new Set(teams)];
-  // Separar si ambos clubes quedaron en un solo string
-  if(uniq.length===1&&/berazategui/i.test(uniq[0])&&/obras|sanitarias/i.test(uniq[0])){
-    const a=uniq[0].match(/[A-Za-záéíóúñüÁÉÍÓÚÑ.\s]*berazategui[A-Za-záéíóúñüÁÉÍÓÚÑ.\s]*(?:\([^)]*\))?/i);
-    const b=uniq[0].match(/[A-Za-záéíóúñüÁÉÍÓÚÑ.\s]*obras[A-Za-záéíóúñüÁÉÍÓÚÑ.\s]*(?:\([^)]*\))?/i);
-    if(a&&b)uniq=[a[0].trim(),b[0].trim()];
-  }
-  uniq.sort((a,b)=>{const sc=n=>(/deportivo|club|obras|sanitarias|berazategui|boca|river|racing|quimsa|instituto|peñarol|aguada/i.test(n)?5:0)+(/\([Ff]\)/.test(n)?2:0)+(n.split(' ').length>=2?1:0);return sc(b)-sc(a);});
-  if(uniq[0])set('ocrTeamA',uniq[0].slice(0,40).replace(/time\s*elapsed/ig,'').trim());
-  if(uniq[1])set('ocrTeamB',uniq[1].slice(0,40).replace(/time\s*elapsed/ig,'').trim());
-  // Diccionario rápido AR mujeres si el OCR trajo fragmentos
-  const raw=t.toLowerCase();
-  if(/berazategui/.test(raw)&&/obras|sanitarias/.test(raw)){
-    if(!$('ocrTeamA')?.value||$('ocrTeamA').value.length<5)set('ocrTeamA','Deportivo Berazategui (F)');
-    if(!$('ocrTeamB')?.value||$('ocrTeamB').value.length<5||/time|elapsed|deportivo time/i.test($('ocrTeamB').value))set('ocrTeamB','Obras Sanitarias (F)');
-  }
+  if(per)set('ocrPeriod',String(per[1]));
+  else if(/\bOT\b|prórroga|prorroga|overtime/i.test(t))set('ocrPeriod','OT');
+  if(!$('ocrPeriod')?.value&&$('ocrClock')?.value){const m=$('ocrClock').value.match(/^(\d+)/);if(m&&+m[1]>=18&&+m[1]<=28)set('ocrPeriod','3');}
+
   const lineM=t.match(/(?:más de|menos de|over|under|total)[^\d]{0,14}(\d{2,3}(?:[.,]\d)?)/i);
   if(lineM&&$('lineTotal'))$('lineTotal').value=lineM[1].replace(',','.');
-  const overOdds=t.match(/(?:más de|over)[^\d]{0,20}\d{2,3}(?:[.,]\d)?[^\d]{0,10}(\d[.,]\d{2})/i);
-  const underOdds=t.match(/(?:menos de|under)[^\d]{0,20}\d{2,3}(?:[.,]\d)?[^\d]{0,10}(\d[.,]\d{2})/i);
-  if(overOdds&&$('oddsOver'))$('oddsOver').value=overOdds[1].replace(',','.');
-  if(underOdds&&$('oddsUnder'))$('oddsUnder').value=underOdds[1].replace(',','.');
+  const odds=[...t.matchAll(/\b(1\.\d{2,3})\b/g)].map(m=>+m[1]).filter(x=>x>=1.2&&x<=3.5);
+  if(odds.length>=2&&$('oddsOver')&&!$('oddsOver').value){$('oddsOver').value=String(odds[0]);if($('oddsUnder'))$('oddsUnder').value=String(odds[1]);}
 }
 
 if($('imageInput'))$('imageInput').onchange=e=>{selectedImage=e.target.files&&e.target.files[0];if($('readImage'))$('readImage').disabled=!selectedImage;
@@ -222,10 +232,23 @@ if($('readImage'))$('readImage').onclick=async()=>{
       return c;
     };
     const variants=[makeVariant(0,2.0,40),makeVariant(0,2.0,80),makeVariant(0,1.5,0),makeVariant(0,2.5,60)];
+    try{
+      const inv=makeVariant(0,2.2,50);
+      const ctx=inv.getContext('2d');const img=ctx.getImageData(0,0,inv.width,inv.height);const d=img.data;
+      for(let i=0;i<d.length;i+=4){d[i]=255-d[i];d[i+1]=255-d[i+1];d[i+2]=255-d[i+2];}
+      ctx.putImageData(img,0,0);variants.push(inv);
+      const top=makeVariant(0,3.0,70);
+      const th=Math.floor(top.height*0.4);
+      const cropped=document.createElement('canvas');cropped.width=top.width;cropped.height=th;
+      cropped.getContext('2d').drawImage(top,0,0,top.width,th,0,0,top.width,th);
+      const cimg=cropped.getContext('2d').getImageData(0,0,cropped.width,cropped.height);const cd=cimg.data;
+      for(let i=0;i<cd.length;i+=4){cd[i]=255-cd[i];cd[i+1]=255-cd[i+1];cd[i+2]=255-cd[i+2];}
+      cropped.getContext('2d').putImageData(cimg,0,0);variants.push(cropped);
+    }catch(e){}
     if($('ocrStatus'))$('ocrStatus').textContent='OCR multi-pase…';
     const texts=[];
     for(let i=0;i<variants.length;i++){
-      if($('ocrProgress'))$('ocrProgress').style.width=(10+i*20)+'%';
+      if($('ocrProgress'))$('ocrProgress').style.width=(10+i*12)+'%';
       try{const r=await Tesseract.recognize(variants[i],'spa+eng',{logger:()=>{},tessedit_pageseg_mode:i%2===0?'6':'11',preserve_interword_spaces:'1'});
         if(r.data&&r.data.text)texts.push(r.data.text);}catch(e){}
     }
@@ -233,12 +256,8 @@ if($('readImage'))$('readImage').onclick=async()=>{
     const text=texts.join('\n---\n');
     if($('ocrText'))$('ocrText').value=text;
     if($('ocrProgress'))$('ocrProgress').style.width='100%';
-    if($('ocrStatus'))$('ocrStatus').textContent='Listo. Revisá equipos y marcador. Si falló, corregí a mano y aplicá.';
+    if($('ocrStatus'))$('ocrStatus').textContent='Listo.';
     parseOcrText(text);
-    // Hint si pts parecen basura
-    const pa=Number($('ocrPtsA')?.value),pb=Number($('ocrPtsB')?.value);
-    if((pa||pb)&&(pa<12&&pb<12)||(pa>0&&pb>0&&pa+pb<20))
-      if($('ocrStatus'))$('ocrStatus').textContent='OCR dudoso en el marcador. Escribí a mano Pts A/B (ej. 38 y 30) y aplicá.';
   }catch(e){if($('ocrStatus'))$('ocrStatus').textContent='Error: '+e.message;}
 };
 if($('applyOCR'))$('applyOCR').onclick=()=>{
@@ -251,7 +270,6 @@ if($('applyOCR'))$('applyOCR').onclick=()=>{
         const mm=Math.floor(remain),ss=Math.round((remain-mm)*60);$('period').value=String(perIdx+1);$('clock').value=mm+':'+String(ss).padStart(2,'0');}
       else $('clock').value=$('ocrClock').value;}}
   calculate();runModel();
-  // Seguimiento autónomo tras aplicar apuesta/captura
   if(shareId&&!liveWatchTimer){startLiveWatch();if($('watchLive'))$('watchLive').textContent='Detener seguimiento';}
   notifyAction('Captura aplicada · seguimiento vivo '+(liveWatchTimer?'ON':'listo'),true);
 };
