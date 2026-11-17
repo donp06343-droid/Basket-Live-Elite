@@ -1,89 +1,67 @@
-# Basket Live Elite
+# Basket Live Elite v2.2
 
-Plataforma de seguimiento, estadísticas avanzadas y análisis de baloncesto con gestión de bankroll (Criterio de Kelly).
+Plataforma de seguimiento, estadísticas avanzadas y análisis de baloncesto con gestión de bankroll (Criterio de Kelly **conservador**).
 
-> Herramienta **educativa**. No es consejo financiero ni de apuestas. Apostá con responsabilidad.
+> Herramienta **educativa**. No es consejo financiero ni de apuestas. Apostá con responsabilidad y cumplí la ley de tu jurisdicción.
 
-## Funciones principales
+## Qué incluye
 
 ### Marcador y métricas
-- Diseño adaptable a PC y celular.
-- Marcador manual: equipos, competición (FIBA / NBA / custom), período y reloj.
-- Box score completo: FGA, FGM, triples, libres, rebotes, pérdidas, asistencias, robos y tapones.
-- Métricas: posesiones, Pace, ORtg, DRtg, Net Rating, eFG%, TS%, FG%, 3P%, FT%, TOV%, ORB%, FTA/FGA, AST/TO y Four Factors.
+- Diseño adaptable PC / celular
+- Box score completo + Pace, ORtg, DRtg, Net, eFG%, TS%, Four Factors
 
-### OCR de capturas (mejorado)
-- Subí una captura del marcador.
-- Pre-procesado de contraste + Tesseract.js (español + inglés) 100 % en el navegador.
-- Detección de marcador, reloj, período y nombres de equipo.
-- **Siempre revisá** el resultado antes de aplicar.
+### OCR para casas de apuestas
+- Capturas tipo Bet365 / apps AR: detecta equipos, marcador (`38 : 30`), *time elapsed*, período, líneas Over/Under
+- Al aplicar → corre el modelo automáticamente
 
-### Seguimiento continuo por video / pantalla
-- Compartí una ventana, pestaña o pantalla donde se vea un scoreboard público.
-- El sistema captura frames periódicamente, corre OCR y actualiza el marcador.
-- Si tenés un enlace live activo, también empuja las actualizaciones al visor compartido.
-- Nada de la imagen se sube al servidor.
+### Screen share
+- Compartí pestaña/ventana del scoreboard
+- OCR periódico + actualización de marcador + modelo
 
-### Análisis profesional en vivo
-- Genera un informe estructurado (estilo analista) con:
-  - Estado del marcador y control del partido
-  - Eficiencia (ORtg / DRtg / Net / Four Factors)
-  - Ritmo (Pace)
-  - Lectura de cuotas y edge (si cargás cuotas + tu probabilidad modelo)
-  - Contexto emocional / situacional
-  - Recomendación operativa: **ENTRAR / HOLD / NO ENTRAR / CONSIDERAR CASH-OUT**
-- Notificaciones del navegador cuando cambia la recomendación.
+### Modelo probabilístico v2.2 (conservador)
+- Proyección bayesiana del total
+- P(Over/Under) y P(ganador) con mezcla modelo/mercado
+- Filtros estrictos: ≥8 min jugados, EV ≥5%, edge ≥3.5 pp, cuota ≥1.25
+- Stake máximo **2.5%** del bankroll · máximo **¼ Kelly**
+- Acciones: **ENTRAR / HOLD / NO ENTRAR / CASH-OUT**
+- Cash-out cuando el edge se cae o el marcador se da vuelta
+- Alertas de ritmo (acelera/frena)
 
-### Criterio de Kelly y bankroll
-- Cálculo de Kelly completo y fraccionado (¼, ½, ¾).
-- Stake sugerido, edge y valor esperado.
-- Registro manual de posiciones abiertas (ganadas / perdidas / cash-out).
-- Bankroll persistente en el navegador.
+### Seguimiento vivo + notificaciones
+- Botón **Seguir vivo + avisos**
+- Re-análisis cada 20 s
+- Notificaciones del navegador al cambiar la acción (sobre todo CASH-OUT)
 
-### Compartir y historial
-- Enlaces públicos de solo lectura (actualización cada 5 s).
-- Clave privada de edición por partido (solo el navegador creador puede modificar).
-- Historial en SQLite en el servidor.
+### Live links
+- Enlace público de solo lectura
+- Clave de edición local por partido
 
-## Modelo probabilístico (v2.1)
-
-Archivo `public/model.js`, sin dependencias y con tests (`npm test`).
-
-- **Proyección del total** con mezcla bayesiana: el ritmo real pesa más cuantos más minutos se juegan; el resto lo aporta la línea de mercado.
-- **P(Over/Under)** con distribución normal y manejo de push; **P(ganador)** a partir del marcador, el tiempo y la fuerza pre-partido.
-- **EV y Kelly**: se quita el margen de la casa, la probabilidad se mezcla 65 % modelo / 35 % mercado, mínimo EV 4 %, ventaja mínima 3 pp, mínimo 6 minutos jugados y stake con tope del 4 % del bankroll.
-- **Cambios de ritmo**: compara los puntos/min de los últimos 3 minutos o más con el ritmo anterior (z-score) y avisa una vez por tramo.
-- Sin cuotas pre-partido no se evalúa valor en el ganador, para no inventar ventajas.
-
-Ningún modelo garantiza beneficio: estima probabilidades, no resultados.
-
-## Ejecutar localmente
-
-Requiere **Node.js 22**:
+## Correr local
 
 ```bash
 npm install
 npm start
+# http://localhost:3000
+npm test
 ```
 
-Abrí http://localhost:3000
+Requiere **Node.js 22**.
 
-## Publicar en Render
+## Deploy en Render
 
-El archivo `render.yaml` configura un servicio gratuito. Conectá el repositorio en Render con **New > Blueprint**.
+Conectá el repo con **New → Blueprint** (`render.yaml`).
 
-En el plan gratuito el disco puede ser temporal: el historial SQLite puede perderse tras reinicios. Para datos fiables hace falta almacenamiento persistente.
+En plan free el disco puede ser temporal.
 
-## Límites importantes
+## Filosofía de riesgo
 
-- El seguimiento por pantalla/OCR depende de la calidad del scoreboard y de la fuente. No es 100 % preciso; siempre validá.
-- No obtiene automáticamente el marcador desde APIs de ligas ni streams de pago.
-- Las recomendaciones de “entrar / no entrar / cash-out” son **heurísticas educativas** basadas en el flujo del partido y, si las cargás, en tu probabilidad modelo vs cuota. No garantizan resultados.
-- Cumplí las leyes de tu jurisdicción sobre apuestas.
+- Menos stake, más reflexión
+- No forzar entradas con poco sample
+- Preferir **HOLD / NO ENTRAR / CASH-OUT** cuando el edge no es claro
+- El objetivo es **proteger bankroll**, no maximizar apuestas
 
 ## Seguridad
 
-- El enlace público solo permite consultar.
-- La clave de edición queda en el navegador que creó el partido.
-- Si configurás `APP_TOKEN` en el entorno, las escrituras también lo exigen.
-- No subas tokens ni datos personales a GitHub.
+- El enlace público solo consulta
+- La clave de edición queda en el navegador creador
+- `APP_TOKEN` opcional en el entorno para escrituras
