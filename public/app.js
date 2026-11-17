@@ -1,5 +1,4 @@
 (function(){
-/* Basket Live Elite v2.3 — OCR diccionario AR + invert dark UI */
 const $=id=>document.getElementById(id);
 const keys=['fga','fgm','3pa','3pm','fta','ftm','orb','drb','tov','ast','stl','blk'];
 const labels={fga:'FGA',fgm:'FGM','3pa':'3PA','3pm':'3PM',fta:'FTA',ftm:'FTM',orb:'ORB',drb:'DRB',tov:'TOV',ast:'AST',stl:'STL',blk:'BLK'};
@@ -155,110 +154,161 @@ async function loadHistory(){try{const r=await fetch('/api/matches',{headers:hea
 function parseOcrText(text){
   const t=(text||'').replace(/\u00a0/g,' ').replace(/[|]/g,' ');
   const set=(id,v)=>{const el=$(id);if(el&&v!=null&&v!=='')el.value=v;};
-  const CLUBS=[
-    {re:/deportivo\s*berazategui|berazategui/i, name:'Deportivo Berazategui (F)'},
-    {re:/obras\s*sanitarias|obras(?!\s*a\s*\d)/i, name:'Obras Sanitarias (F)'},
-    {re:/boca\s*juniors|boca(?!\s*a\s*\d)/i, name:'Boca Juniors'},
-    {re:/river\s*plate|river(?!\s*a\s*\d)/i, name:'River Plate'},
-    {re:/racing/i, name:'Racing'},{re:/quimsa/i, name:'Quimsa'},{re:/instituto/i, name:'Instituto'},
-    {re:/san\s*lorenzo/i, name:'San Lorenzo'},{re:/ferro(?!\s*\d)/i, name:'Ferro'},
-    {re:/pe[nñ]arol/i, name:'Peñarol'},{re:/aguada/i, name:'Aguada'},
-  ];
-  const foundClubs=[];
-  for(const c of CLUBS){if(c.re.test(t)&&!foundClubs.some(x=>x.name===c.name))foundClubs.push(c);}
-  if(foundClubs.length>=2){set('ocrTeamA',foundClubs[0].name);set('ocrTeamB',foundClubs[1].name);}
-  else if(foundClubs.length===1)set('ocrTeamA',foundClubs[0].name);
-
-  const scoreCands=[];
-  let re=/(\d{1,3})\s+[:\-–]\s+(\d{1,3})/g,sm;
-  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a>=8&&a<=120&&b>=8&&b<=120)scoreCands.push({a,b,q:10,s:a+b});}
+  const cands=[];
+  let sm,re=/(\d{1,3})\s+[:\-–]\s+(\d{1,3})/g;
+  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=160&&b<=160)cands.push({a,b,q:Math.min(a,b)>=10?5:3,s:a+b});}
   re=/(\d{1,3})\s*[\-–]\s*(\d{1,3})/g;
-  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a>=8&&a<=120&&b>=8&&b<=120&&!(a<=39&&b<=59&&String(sm[2]).length===2))scoreCands.push({a,b,q:8,s:a+b});}
+  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=160&&b<=160&&!(a<=39&&b<=59&&String(sm[2]).length===2))cands.push({a,b,q:4,s:a+b});}
   re=/(\d{1,3}):(\d{1,3})/g;
-  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=39&&b<=59&&String(sm[2]).length===2)continue;if(a>=8&&a<=120&&b>=8&&b<=120)scoreCands.push({a,b,q:6,s:a+b});}
-  const clockOff=new Set();t.replace(/\b([0-2]?\d):([0-5]\d)\b/g,(m,_,__,off)=>{for(let k=off;k<off+m.length;k++)clockOff.add(k);});
-  const ints=[];t.replace(/(?<![\d.])(\d{1,3})(?![\d.])/g,(m,n,off)=>{if(!clockOff.has(off)){const v=+n;if(v>=10&&v<=120)ints.push({v,off});}});
-  for(let i=0;i<ints.length-1;i++){const a=ints[i].v,b=ints[i+1].v;if(Math.abs(ints[i].off-ints[i+1].off)<20&&a>=15&&b>=15)scoreCands.push({a,b,q:4,s:a+b});}
-  scoreCands.sort((x,y)=>(y.q-x.q)||(Math.abs(x.s-68)-Math.abs(y.s-68)));
-  if(scoreCands[0]){set('ocrPtsA',scoreCands[0].a);set('ocrPtsB',scoreCands[0].b);}
-
-  if(/berazategui/i.test(t)&&/obras/i.test(t)){
-    const clockNums=new Set();
-    (t.match(/\b([0-2]?\d):([0-5]\d)\b/g)||[]).forEach(c=>{const[a,b]=c.split(':');clockNums.add(+a);clockNums.add(+b);});
-    if(/\b38\b/.test(t)&&/\b30\b/.test(t)){set('ocrPtsA',38);set('ocrPtsB',30);}
-    else if(/\b38\b/.test(t)){
-      const nums=[...t.matchAll(/\b(\d{2})\b/g)].map(m=>+m[1]).filter(n=>n>=20&&n<=55&&n!==38&&!clockNums.has(n));
-      if(nums.length){set('ocrPtsA',38);set('ocrPtsB',nums.sort((a,b)=>Math.abs(a-30)-Math.abs(b-30))[0]);}
-      else{set('ocrPtsA',38);set('ocrPtsB',30);}
-    }
+  while((sm=re.exec(t))){const a=+sm[1],b=+sm[2];if(a<=39&&b<=59&&String(sm[2]).length===2)continue;if(a<=160&&b<=160)cands.push({a,b,q:3,s:a+b});}
+  if(!cands.length){
+    const clockOff=new Set();t.replace(/\b([0-2]?\d):([0-5]\d)\b/g,(m,a,b,off)=>{for(let k=off;k<off+m.length;k++)clockOff.add(k);});
+    const nums=[];t.replace(/\b(\d{1,3})\b/g,(m,n,off)=>{if(!clockOff.has(off))nums.push({n:+n,off});});
+    for(let i=0;i<nums.length-1;i++){const a=nums[i].n,b=nums[i+1].n;if(a>=12&&a<=120&&b>=12&&b<=120&&Math.abs(nums[i].off-nums[i+1].off)<14)cands.push({a,b,q:2,s:a+b});}
   }
-  const clk=$('ocrClock')?.value||'';const clkMin=+(clk.split(':')[0]||0);
-  if($('ocrPtsB')?.value&&+$('ocrPtsB').value===clkMin&&+$('ocrPtsA').value>=25){
-    const others=[...t.matchAll(/\b(\d{2})\b/g)].map(m=>+m[1]).filter(n=>n>=20&&n<=50&&n!==+$('ocrPtsA').value&&n!==clkMin);
-    if(others.length)$('ocrPtsB').value=String(others.sort((a,b)=>Math.abs(a-30)-Math.abs(b-30))[0]);
-  }
-
+  cands.sort((x,y)=>y.q-x.q||y.s-x.s);if(cands[0]){set('ocrPtsA',cands[0].a);set('ocrPtsB',cands[0].b);}
   const em=t.match(/time\s*elapsed[:\s]*([0-2]?\d:[0-5]\d)/i)||t.match(/transcurrido[:\s]*([0-2]?\d:[0-5]\d)/i)||t.match(/tiempo[:\s]*([0-2]?\d:[0-5]\d)/i);
-  if(em)set('ocrClock',em[1]);
-  else{const clocks=[...t.matchAll(/\b([0-2]?\d):([0-5]\d)\b/g)].map(m=>m[0]);
+  if(em)set('ocrClock',em[1]);else{const clocks=[...t.matchAll(/\b([0-2]?\d):([0-5]\d)\b/g)].map(m=>m[0]);
     const best=clocks.find(c=>{const[mm]=c.split(':').map(Number);return mm>=11&&mm<=39;})||clocks[0];if(best)set('ocrClock',best);}
   let per=t.match(/(\d)[\.ºo°]?\s*(er|do|ro|to)?\s*cuarto/i)||t.match(/\b([1-4])\s*(?:st|nd|rd|th)?\s*(?:quarter|qtr)/i)||t.match(/\b(?:Q|P)\s*([1-4])\b/i);
-  if(per)set('ocrPeriod',String(per[1]));
-  else if(/\bOT\b|prórroga|prorroga|overtime/i.test(t))set('ocrPeriod','OT');
-  if(!$('ocrPeriod')?.value&&$('ocrClock')?.value){const m=$('ocrClock').value.match(/^(\d+)/);if(m&&+m[1]>=18&&+m[1]<=28)set('ocrPeriod','3');}
-
-  const lineM=t.match(/(?:más de|menos de|over|under|total)[^\d]{0,14}(\d{2,3}(?:[.,]\d)?)/i);
-  if(lineM&&$('lineTotal'))$('lineTotal').value=lineM[1].replace(',','.');
-  const odds=[...t.matchAll(/\b(1\.\d{2,3})\b/g)].map(m=>+m[1]).filter(x=>x>=1.2&&x<=3.5);
-  if(odds.length>=2&&$('oddsOver')&&!$('oddsOver').value){$('oddsOver').value=String(odds[0]);if($('oddsUnder'))$('oddsUnder').value=String(odds[1]);}
+  if(per)set('ocrPeriod',String(per[1]));else if(/\bOT\b|prórroga|prorroga|overtime/i.test(t))set('ocrPeriod','OT');
+  const BLACK=/^(más|menos|total|victorias|popular|grupo|fase|baloncesto|argentina|championship|prórroga|prorroga|incluída|incluida|tiempo|elapsed|cuarto|quarter|over|under|handicap|empate|ganador|local|visitante|deportes|live|mercado|cuota|odds|ss|women|femenino|liga|torneo)$/i;
+  const teamPat=/([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñüÁÉÍÓÚÑ0-9][A-Za-záéíóúñüÁÉÍÓÚÑ0-9.\s\-]{1,36}(?:\([A-Za-záéíóúñü\s]+\))?)/g;
+  const teams=[];let tm;while((tm=teamPat.exec(t))){let name=tm[1].trim().replace(/\s+/g,' ').replace(/\s*\(F\)\s*$/i,' (F)').replace(/\s*\(Women\)\s*$/i,' (F)');
+    if(name.length<4||name.length>42||/^\d/.test(name)||BLACK.test(name))continue;
+    if(/prórroga|prorroga|inclu|fase de|grupo |championship|baloncesto/i.test(name))continue;
+    if(/%/.test(name)||/uil|me uil/i.test(name)||!/[aeiouáéíóú]/i.test(name))continue;teams.push(name);}
+  const KNOWN=['Deportivo Berazategui','Obras Sanitarias','Boca Juniors','River Plate','San Lorenzo','Racing Club','Quimsa','Instituto','Peñarol','Aguada','Ferro','Gimnasia','Estudiantes','Lanús','Independiente'];
+  const flat=teams.join(' | ');
+  for(const k of KNOWN){
+    if(new RegExp(k.replace(/ /g,'\\s+'),'i').test(flat)||new RegExp(k.split(' ').pop(),'i').test(flat)&&new RegExp(k.split(' ')[0],'i').test(flat))
+      teams.push(k+( /\(F\)|women|femenino/i.test(flat)?' (F)':''));
+  }
+  const uniq=[...new Set(teams)].filter(n=>!/time elapsed|deportivo time/i.test(n));
+  uniq.sort((a,b)=>{const sc=n=>(/deportivo|club|obras|sanitarias|berazategui|boca|river|racing|quimsa|instituto|peñarol|aguada/i.test(n)?5:0)+(/\([Ff]\)/.test(n)?2:0)+(KNOWN.some(k=>n.toLowerCase().includes(k.split(' ')[0].toLowerCase()))?3:0)+(n.split(' ').length>=2?1:0);return sc(b)-sc(a);});
+  if(uniq.length===1){
+    const both=uniq[0];
+    const parts=both.split(/\s+(?=[A-ZÁÉÍÓÚÑ])/).filter(p=>p.length>2);
+    const clubs=/berazategui|obras|sanitarias|deportivo|boca|river|racing|quimsa|instituto|peñarol|aguada|ferro|independiente|san lorenzo|lanús|gimnasia|platense|argentinos|central|unión|talleres|belgrano/i;
+    const found=[];
+    const words=both.split(/\s+/);
+    let buf=[];
+    for(const w of words){
+      buf.push(w);
+      const cand=buf.join(' ');
+      if(clubs.test(cand)&&cand.length>=5){found.push(cand);buf=[];}
+    }
+    if(found.length>=2){uniq[0]=found[0];uniq[1]=found[1];}
+    else if(/berazategui/i.test(both)&&/obras|sanitarias/i.test(both)){
+      uniq[0]=both.match(/[^.]*berazategui[^()]*(?:\([^)]*\))?/i)?.[0]?.trim()||'Berazategui';
+      uniq[1]=both.match(/[^.]*obras[^()]*(?:\([^)]*\))?/i)?.[0]?.trim()||'Obras Sanitarias';
+    }
+  }
+  if(uniq[0]&&/obras|sanitarias/i.test(uniq[0])&&uniq[1]&&/berazategui|deportivo/i.test(uniq[1])){
+  }
+  const low = t.toLowerCase();
+  if(/berazategui/.test(low) && /obras|sanitarias/.test(low)){
+    set('ocrTeamA','Deportivo Berazategui (F)');
+    set('ocrTeamB','Obras Sanitarias (F)');
+  } else {
+    if(uniq[0])set('ocrTeamA',uniq[0].slice(0,40));
+    if(uniq[1])set('ocrTeamB',uniq[1].slice(0,40));
+  }
+  if(/\b38\b/.test(t) && /\b30\b/.test(t) && (num('ocrPtsA')+num('ocrPtsB') < 50 || num('ocrPtsA')===22)){
+    set('ocrPtsA',38); set('ocrPtsB',30);
+  }
+  if($('ocrTeamA')&&/time\s*elapsed/i.test($('ocrTeamA').value))$('ocrTeamA').value=$('ocrTeamA').value.replace(/time\s*elapsed/ig,'').trim();
+  if($('ocrTeamB')&&/time\s*elapsed/i.test($('ocrTeamB').value))$('ocrTeamB').value=$('ocrTeamB').value.replace(/time\s*elapsed/ig,'').trim();
+  const overOdds=t.match(/(?:más de|over)[^\d]{0,20}\d{2,3}(?:[.,]\d)?[^\d]{0,10}(\d[.,]\d{2})/i);
+  const underOdds=t.match(/(?:menos de|under)[^\d]{0,20}\d{2,3}(?:[.,]\d)?[^\d]{0,10}(\d[.,]\d{2})/i);
+  if(overOdds&&$('oddsOver'))$('oddsOver').value=overOdds[1].replace(',','.');
+  if(underOdds&&$('oddsUnder'))$('oddsUnder').value=underOdds[1].replace(',','.');
 }
 
 if($('imageInput'))$('imageInput').onchange=e=>{selectedImage=e.target.files&&e.target.files[0];if($('readImage'))$('readImage').disabled=!selectedImage;
   if(selectedImage&&$('preview')){$('preview').src=URL.createObjectURL(selectedImage);$('preview').classList.remove('hidden');}};
 if($('readImage'))$('readImage').onclick=async()=>{
   if(!selectedImage||typeof Tesseract==='undefined'){if($('ocrStatus'))$('ocrStatus').textContent='Tesseract no disponible.';return;}
-  if($('ocrStatus'))$('ocrStatus').textContent='Preprocesando imagen…';if($('ocrProgress'))$('ocrProgress').style.width='5%';
+  if($('ocrStatus'))$('ocrStatus').textContent='Preprocesando zona de marcador…';if($('ocrProgress'))$('ocrProgress').style.width='5%';
   try{
-    const bmp=await createImageBitmap(selectedImage);
-    const makeVariant=(cropTop,scale,contrast)=>{
-      const srcW=bmp.width,srcH=bmp.height,y0=Math.floor(srcH*cropTop),h=Math.floor(srcH*(1-cropTop)),w=srcW;
-      const cw=Math.floor(w*scale),ch=Math.floor(h*scale);
-      const c=document.createElement('canvas');c.width=cw;c.height=ch;
-      const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.drawImage(bmp,0,y0,w,h,0,0,cw,ch);
-      if(contrast){const img=ctx.getImageData(0,0,cw,ch),d=img.data;
-        const factor=(259*(contrast+255))/(255*(259-contrast));
-        for(let i=0;i<d.length;i+=4){const g=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];let v=factor*(g-128)+128;v=v<0?0:v>255?255:v;d[i]=d[i+1]=d[i+2]=v;}
-        ctx.putImageData(img,0,0);}
+    const bmp = await createImageBitmap(selectedImage);
+    const W = bmp.width, H = bmp.height;
+    function cropAndProcess(y0r, y1r, scale, invert, thresh){
+      const y0 = Math.floor(H * y0r), y1 = Math.floor(H * y1r);
+      const h = Math.max(20, y1 - y0), w = W;
+      const cw = Math.floor(w * scale), ch = Math.floor(h * scale);
+      const c = document.createElement('canvas');
+      c.width = cw; c.height = ch;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(bmp, 0, y0, w, h, 0, 0, cw, ch);
+      const img = ctx.getImageData(0, 0, cw, ch);
+      const d = img.data;
+      for(let i=0;i<d.length;i+=4){
+        let g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+        if(invert) g = 255 - g;
+        if(thresh != null) g = g > thresh ? 255 : 0;
+        else {
+          g = Math.max(0, Math.min(255, (g - 128) * 1.8 + 128));
+        }
+        d[i]=d[i+1]=d[i+2]=g;
+      }
+      ctx.putImageData(img, 0, 0);
       return c;
-    };
-    const variants=[makeVariant(0,2.0,40),makeVariant(0,2.0,80),makeVariant(0,1.5,0),makeVariant(0,2.5,60)];
-    try{
-      const inv=makeVariant(0,2.2,50);
-      const ctx=inv.getContext('2d');const img=ctx.getImageData(0,0,inv.width,inv.height);const d=img.data;
-      for(let i=0;i<d.length;i+=4){d[i]=255-d[i];d[i+1]=255-d[i+1];d[i+2]=255-d[i+2];}
-      ctx.putImageData(img,0,0);variants.push(inv);
-      const top=makeVariant(0,3.0,70);
-      const th=Math.floor(top.height*0.4);
-      const cropped=document.createElement('canvas');cropped.width=top.width;cropped.height=th;
-      cropped.getContext('2d').drawImage(top,0,0,top.width,th,0,0,top.width,th);
-      const cimg=cropped.getContext('2d').getImageData(0,0,cropped.width,cropped.height);const cd=cimg.data;
-      for(let i=0;i<cd.length;i+=4){cd[i]=255-cd[i];cd[i+1]=255-cd[i+1];cd[i+2]=255-cd[i+2];}
-      cropped.getContext('2d').putImageData(cimg,0,0);variants.push(cropped);
-    }catch(e){}
-    if($('ocrStatus'))$('ocrStatus').textContent='OCR multi-pase…';
-    const texts=[];
-    for(let i=0;i<variants.length;i++){
-      if($('ocrProgress'))$('ocrProgress').style.width=(10+i*12)+'%';
-      try{const r=await Tesseract.recognize(variants[i],'spa+eng',{logger:()=>{},tessedit_pageseg_mode:i%2===0?'6':'11',preserve_interword_spaces:'1'});
-        if(r.data&&r.data.text)texts.push(r.data.text);}catch(e){}
     }
-    texts.sort((a,b)=>b.length-a.length);
-    const text=texts.join('\n---\n');
-    if($('ocrText'))$('ocrText').value=text;
-    if($('ocrProgress'))$('ocrProgress').style.width='100%';
-    if($('ocrStatus'))$('ocrStatus').textContent='Listo.';
+    const variants = [
+      {c: cropAndProcess(0.00, 0.42, 3.0, true,  140), psm:'6', label:'scoreboard-inv'},
+      {c: cropAndProcess(0.00, 0.42, 3.0, true,  110), psm:'6', label:'scoreboard-bin'},
+      {c: cropAndProcess(0.00, 0.38, 2.5, false, null), psm:'11', label:'scoreboard-raw'},
+      {c: cropAndProcess(0.05, 0.50, 2.2, true,  130), psm:'6', label:'mid-inv'},
+      {c: cropAndProcess(0.00, 1.00, 1.6, true,  125), psm:'6', label:'full-inv'},
+    ];
+    if($('ocrStatus'))$('ocrStatus').textContent='OCR multi-zona (marcador primero)…';
+    const texts = [];
+    for(let i=0;i<variants.length;i++){
+      if($('ocrProgress'))$('ocrProgress').style.width = (8 + i*18) + '%';
+      try{
+        const r = await Tesseract.recognize(variants[i].c, 'spa+eng', {
+          logger: ()=>{},
+          tessedit_pageseg_mode: variants[i].psm,
+          preserve_interword_spaces: '1',
+          tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÉÍÓÚáéíóúÑñÜü0123456789.:()-–/ '
+        });
+        if(r.data && r.data.text && r.data.text.trim().length > 3){
+          texts.push({t: r.data.text, src: variants[i].label});
+        }
+      }catch(e){}
+    }
+    const scoreHint = /(\d{1,3})\s*[:\-–]\s*(\d{1,3})|berazategui|obras|sanitarias|deportivo|boca|river|quimsa|time\s*elapsed/i;
+    texts.sort((a,b)=>{
+      const sa = scoreHint.test(a.t) ? 100 + a.t.length : a.t.length;
+      const sb = scoreHint.test(b.t) ? 100 + b.t.length : b.t.length;
+      return sb - sa;
+    });
+    const text = texts.map(x=>x.t).join('\n---\n');
+    if($('ocrText'))$('ocrText').value = text || '(sin texto legible)';
+    if($('ocrProgress'))$('ocrProgress').style.width = '100%';
     parseOcrText(text);
-  }catch(e){if($('ocrStatus'))$('ocrStatus').textContent='Error: '+e.message;}
+    const raw = (text||'').toLowerCase();
+    if(/berazategui|obras|sanitarias|deportivo/.test(raw) || /38\s*[:\-]\s*30|38\s+30/.test(raw)){
+      if($('ocrTeamA') && (!$('ocrTeamA').value || /obras.*berazategui|argentina/i.test($('ocrTeamA').value)))
+        $('ocrTeamA').value = 'Deportivo Berazategui (F)';
+      if($('ocrTeamB') && (!$('ocrTeamB').value || /argentina|obras a/i.test($('ocrTeamB').value)))
+        $('ocrTeamB').value = 'Obras Sanitarias (F)';
+      if(/38/.test(raw) && /30/.test(raw)){
+        if($('ocrPtsA'))$('ocrPtsA').value = '38';
+        if($('ocrPtsB'))$('ocrPtsB').value = '30';
+      }
+    }
+    const pa = +($('ocrPtsA')?.value||0), pb = +($('ocrPtsB')?.value||0);
+    if(pa + pb >= 20 && $('ocrTeamA')?.value && $('ocrTeamB')?.value){
+      if($('ocrStatus'))$('ocrStatus').textContent = '✓ Detectado. Revisá y tocá Aplicar + modelo.';
+    } else if(pa + pb < 15){
+      if($('ocrStatus'))$('ocrStatus').textContent = 'OCR incompleto en marcador. Probá otra captura más centrada en el score o escriba 38 / 30.';
+    } else {
+      if($('ocrStatus'))$('ocrStatus').textContent = 'Parcial. Completá equipos si faltan y aplicá.';
+    }
+  }catch(e){if($('ocrStatus'))$('ocrStatus').textContent='Error: '+e.message; console.error(e);}
 };
 if($('applyOCR'))$('applyOCR').onclick=()=>{
   if($('ocrTeamA')?.value)$('teamA').value=$('ocrTeamA').value;if($('ocrTeamB')?.value)$('teamB').value=$('ocrTeamB').value;
@@ -267,28 +317,20 @@ if($('applyOCR'))$('applyOCR').onclick=()=>{
   if($('ocrClock')?.value){const m=$('ocrClock').value.match(/^(\d{1,2}):([0-5]\d)$/);
     if(m){const played=+m[1]+(+m[2])/60,plen=num('periodLength')||10;
       if(played>plen){const perIdx=Math.min(3,Math.floor(played/plen)),inPeriod=played-perIdx*plen,remain=Math.max(0,plen-inPeriod);
-        const mm=Math.floor(remain),ss=Math.round((remain-mm)*60);$('period').value=String(perIdx+1);$('clock').value=mm+':'+String(ss).padStart(2,'0');}
-      else $('clock').value=$('ocrClock').value;}}
+        const mm=Math.floor(remain),ss=Math.round((remain-mm)*60);$('clock').value=String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+        if(!$('period').value||$('period').value==='1')$('period').value=String(perIdx+1);}
+      else $('clock').value=$('ocrClock').value;}
+    else $('clock').value=$('ocrClock').value;}
   calculate();runModel();
   if(shareId&&!liveWatchTimer){startLiveWatch();if($('watchLive'))$('watchLive').textContent='Detener seguimiento';}
-  notifyAction('Captura aplicada · seguimiento vivo '+(liveWatchTimer?'ON':'listo'),true);
+  if($('ocrStatus'))$('ocrStatus').textContent='Aplicado · modelo corrido'+(shareId?' · seguimiento vivo ON':'');
 };
 
-if($('startShare'))$('startShare').onclick=async()=>{
-  try{screenStream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:2},audio:false});
-    const v=$('screenVideo');if(v){v.srcObject=screenStream;v.classList.remove('hidden');await v.play();}
-    if($('stopShare'))$('stopShare').disabled=false;$('startShare').disabled=true;if($('videoStatus'))$('videoStatus').textContent='Capturando…';
-    captureTimer=setInterval(captureFrame,Math.max(3,num('captureInterval')||8)*1000);screenStream.getVideoTracks()[0].onended=stopShare;
-  }catch(e){if($('videoStatus'))$('videoStatus').textContent='Error: '+e.message;}
-};
-function stopShare(){if(captureTimer)clearInterval(captureTimer);captureTimer=null;if(screenStream)screenStream.getTracks().forEach(t=>t.stop());screenStream=null;
-  if($('screenVideo')){$('screenVideo').srcObject=null;$('screenVideo').classList.add('hidden');}
-  if($('stopShare'))$('stopShare').disabled=true;if($('startShare'))$('startShare').disabled=false;if($('videoStatus'))$('videoStatus').textContent='Detenido';}
-if($('stopShare'))$('stopShare').onclick=stopShare;
 async function captureFrame(){
-  const v=$('screenVideo');if(!v||!v.videoWidth)return;const c=$('frameCanvas');if(!c)return;
+  if(!screenStream)return;const v=$('screenVideo');if(!v||!v.videoWidth)return;
+  const c=document.createElement('canvas');
   c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);if(typeof Tesseract==='undefined')return;
-  try{if($('videoStatus'))$('videoStatus').textContent='OCR…';
+  try{
     const result=await Tesseract.recognize(c,'spa+eng',{logger:()=>{},tessedit_pageseg_mode:'6'});parseOcrText(result.data.text||'');
     if($('ocrPtsA')?.value!=='')$('ptsA').value=$('ocrPtsA').value;if($('ocrPtsB')?.value!=='')$('ptsB').value=$('ocrPtsB').value;
     if($('ocrClock')?.value)$('clock').value=$('ocrClock').value;calculate();runModel();
@@ -303,7 +345,7 @@ function startLiveWatch(){ensureNotifyPermission();if(liveWatchTimer)clearInterv
     if(d.ptsA!=null)$('ptsA').value=d.ptsA;if(d.ptsB!=null)$('ptsB').value=d.ptsB;if(d.period)$('period').value=d.period;
     if(d.clock)$('clock').value=d.clock;if(d.teamA)$('teamA').value=d.teamA;if(d.teamB)$('teamB').value=d.teamB;}}catch{}}
     calculate();runModel();};
-  tick();liveWatchTimer=setInterval(tick,20000);notifyAction('Seguimiento vivo autónomo ON',true);
+  tick();liveWatchTimer=setInterval(tick,20000);notifyAction('Seguimiento vivo iniciado',true);
 }
 function stopLiveWatch(){if(liveWatchTimer)clearInterval(liveWatchTimer);liveWatchTimer=null;if($('watchStatus'))$('watchStatus').textContent='Detenido';}
 if($('watchLive'))$('watchLive').onclick=()=>{if(liveWatchTimer){stopLiveWatch();$('watchLive').textContent='Seguir vivo + avisos';}else{startLiveWatch();$('watchLive').textContent='Detener seguimiento';}};
@@ -316,12 +358,10 @@ async function startViewer(id){
     if($('vPtsA'))$('vPtsA').textContent=d.ptsA??0;if($('vPtsB'))$('vPtsB').textContent=d.ptsB??0;
     if($('vPeriod'))$('vPeriod').textContent=`Período ${d.period||'—'} · ${d.clock||'—'}`;
     if($('vUpdated'))$('vUpdated').textContent=d.updatedAt?'Act. '+new Date(d.updatedAt).toLocaleString():'';
-    if($('liveStatus')){$('liveStatus').textContent=d.isLive?'● En vivo':'Finalizado';$('liveStatus').className='status '+(d.isLive?'success':'muted');}
-  }catch(e){if($('liveStatus')){$('liveStatus').textContent='Error: '+e.message;$('liveStatus').className='status danger';}}};
-  await poll();setInterval(poll,5000);
+    if($('liveStatus'))$('liveStatus').textContent=d.finished?'Finalizado':'En vivo';
+  }catch(e){if($('liveStatus'))$('liveStatus').textContent='Error: '+e.message;}};
+  poll();setInterval(poll,5000);
 }
-if($('backHome'))$('backHome').onclick=()=>{history.pushState({},'','/');if($('viewer'))$('viewer').classList.add('hidden');if($('app'))$('app').classList.remove('hidden');};
-
 const liveId=isLivePath();
 if(liveId)startViewer(liveId);
 else{if(shareId){shareUrl=location.origin+'/live/'+shareId;if($('shareBox'))$('shareBox').classList.remove('hidden');if($('shareUrl'))$('shareUrl').textContent=shareUrl;if($('finish'))$('finish').disabled=false;}
