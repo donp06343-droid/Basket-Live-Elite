@@ -91,7 +91,6 @@ app.post("/api/live/:shareId/finish", auth, (req, res) => {
   res.json({ ok: true, isLive: false });
 });
 
-// Contexto público de equipos + links a SofaScore/Flashscore
 app.get("/api/public-context", (req, res) => {
   const teamA = String(req.query.teamA || "").toLowerCase();
   const teamB = String(req.query.teamB || "").toLowerCase();
@@ -114,19 +113,118 @@ app.get("/api/public-context", (req, res) => {
   });
 });
 
-app.get("/api/live-scores", async (_req, res) => {
-  const key = process.env.SPORTSCORE_KEY || process.env.API_SPORTS_KEY;
-  if (!key) {
-    return res.json({ ok: false, reason: "Sin API key. Configurá SPORTSCORE_KEY o API_SPORTS_KEY en Render.", fallback: "Usá /api/public-context" });
+app.get("/api/live-scores", async (req, res) => {
+  const teamA = String(req.query.teamA || "").trim();
+  const teamB = String(req.query.teamB || "").trim();
+  const date = String(req.query.date || new Date().toISOString().slice(0, 10));
+  const key = process.env.API_SPORTS_KEY || process.env.APISPORTS_KEY || "";
+  const results = { ok: false, source: null, matches: [], note: null };
+
+  if (key) {
+    try {
+      const url = `https://v1.basketball.api-sports.io/games?date=${encodeURIComponent(date)}`;
+      const r = await fetch(url, { headers: { "x-apisports-key": key } });
+      const data = await r.json();
+      if (data.errors && Object.keys(data.errors).length) results.apiSportsError = data.errors;
+      let games = data.response || [];
+      const q = (teamA + " " + teamB).toLowerCase();
+      if (q.trim()) {
+        const tokens = q.split(/\s+/).filter(t => t.length > 3);
+        games = games.filter(g => {
+          const h = (g.teams?.home?.name || "").toLowerCase();
+          const a = (g.teams?.away?.name || "").toLowerCase();
+          return tokens.some(t => h.includes(t) || a.includes(t));
+        });
+      }
+      results.matches = games.slice(0, 15).map(g => ({
+        id: g.id,
+        home: g.teams?.home?.name,
+        away: g.teams?.away?.name,
+        homeScore: g.scores?.home?.total,
+        awayScore: g.scores?.away?.total,
+        status: g.status?.long,
+        period: g.status?.short,
+        clock: g.status?.timer || null,
+        league: g.league?.name,
+        country: g.country?.name || g.league?.country?.name,
+        date: g.date,
+        source: "api-sports"
+      }));
+      if (results.matches.length) { results.ok = true; results.source = "api-sports"; }
+      results.apiSportsQuota = data.results;
+    } catch (e) {
+      results.apiSportsError = String(e.message || e);
+    }
   }
-  res.json({ ok: false, reason: "Endpoint listo. Conectá tu proveedor de scores con la key." });
+
+  if (!results.ok) {
+    try {
+      const r = await fetch("https://sportscore.com/api/widget/matches/?sport=basketball&limit=40");
+      const data = await r.json();
+      let matches = data.matches || [];
+      const q = (teamA + " " + teamB).toLowerCase();
+      if (q.trim()) {
+        const tokens = q.split(/\s+/).filter(t => t.length > 3);
+        matches = matches.filter(m => {
+          const h = (m.home || "").toLowerCase();
+          const a = (m.away || "").toLowerCase();
+          return tokens.some(t => h.includes(t) || a.includes(t));
+        });
+      }
+      results.matches = matches.slice(0, 15).map(m => ({
+        home: m.home,
+        away: m.away,
+        homeScore: m.home_score != null ? Number(m.home_score) : null,
+        awayScore: m.away_score != null ? Number(m.away_score) : null,
+        status: m.status_text || m.status,
+        league: m.competition,
+        date: m.time,
+        source: "sportscore"
+      }));
+      if (results.matches.length) {
+        results.ok = true;
+        results.source = "sportscore";
+        results.note = "Powered by SportScore (fallback gratis)";
+      }
+    } catch (e) {
+      results.sportscoreError = String(e.message || e);
+    }
+  }
+
+  if (!results.ok) {
+    results.note = key
+      ? "Sin partidos para esos equipos/fecha. Plan Free de API-Sports no cubre Liga Femenina AR temporada 2025/26 (solo 2022–2024)."
+      : "Configurá API_SPORTS_KEY en Render. Mientras tanto se usa SportScore gratis si hay match.";
+  }
+  res.json(results);
+});
+
+app.get("/api/search-teams", async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  const key = process.env.API_SPORTS_KEY || process.env.APISPORTS_KEY || "";
+  if (!key || q.length < 2) {
+    return res.json({ ok: false, teams: [], reason: !key ? "Sin API_SPORTS_KEY" : "q muy corto" });
+  }
+  try {
+    const r = await fetch(`https://v1.basketball.api-sports.io/teams?search=${encodeURIComponent(q)}`, {
+      headers: { "x-apisports-key": key }
+    });
+    const data = await r.json();
+    const teams = (data.response || []).slice(0, 12).map(t => ({
+      id: t.id, name: t.name, country: t.country?.name, logo: t.logo
+    }));
+    res.json({ ok: true, teams });
+  } catch (e) {
+    res.json({ ok: false, teams: [], error: String(e.message || e) });
+  }
 });
 
 app.use(express.static(path.join(__dirname, "public"), {
   setHeaders(res, filePath) {
-    if (filePath.endsWith(".js") || filePath.endsWith(".html")) res.setHeader("Cache-Control", "no-store, max-age=0");
+    if (filePath.endsWith(".js") || filePath.endsWith(".html"))
+      res.setHeader("Cache-Control", "no-store, max-age=0");
   }
 }));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-app.listen(PORT, () => console.log("Basket Live Elite on :" + PORT));
+app.listen(PORT, "0.0.0.0", () => console.log("Basket Live Elite on :" + PORT));
