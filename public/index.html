@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08111f">
-<title>Basket Live Elite v2.2</title>
+<title>Basket Live Elite v2.4</title>
 <style>
 :root{color-scheme:dark;--bg:#08111f;--panel:#111f33;--panel2:#0b192b;--line:#263b58;--text:#eaf2ff;--muted:#9db0ca;--blue:#2563eb;--cyan:#22d3ee;--green:#34d399;--red:#fb7185;--amber:#fbbf24}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% -10%,#1d426b 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
@@ -52,8 +52,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 </head>
 <body>
 <header>
-<h1>🏀 Basket Live Elite <span class="small" style="color:var(--cyan);font-weight:500">v2.2</span></h1>
-<p>Marcador · OCR casas · Screen share · Kelly conservador (ARS) · Cash-out · Avisos en vivo</p>
+<h1>🏀 Basket Live Elite <span class="small" style="color:var(--cyan);font-weight:500">v2.4</span></h1>
+<p>Marcador · OCR casas · Screen share · Kelly conservador (ARS) · Cash-out · Avisos en vivo · Multi-deporte</p>
 </header>
 <main>
 <div id="viewer" class="hidden">
@@ -117,8 +117,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 </section>
 <section id="capture" class="panel">
 <div class="card">
-<h2>📷 OCR (casas de apuestas)</h2>
-<p class="muted">Subí una captura clara del marcador (ideal: 38 : 30 con espacios). Detecta equipos, puntos, tiempo, período y líneas. Si el OCR sale mal, corregí a mano y aplicá.</p>
+<h2>📷 OCR (casas de apuestas · multi-deporte)</h2>
+<p class="muted">Subí captura del marcador vivo (basket, fútbol, etc.). Prioriza la zona superior del scoreboard. Detecta equipos, puntos, tiempo, período y líneas Over/Under. Después de aplicar se activa el seguimiento vivo si hay link.</p>
 <label>Imagen<input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"></label>
 <img id="preview" class="preview hidden" alt="">
 <div class="actions"><button id="readImage" class="primary" disabled>Reconocer</button></div>
@@ -150,7 +150,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <section id="analysis" class="panel">
 <div class="card"><h2>📈 Métricas</h2><div id="metrics" class="muted">Calculá un partido.</div></div>
 <div class="card">
-<h2>🧠 Modelo v2.2</h2>
+<h2>🧠 Modelo v2.4</h2>
 <div class="grid">
 <label>Línea total<input id="lineTotal" type="number" step="0.5" placeholder="125.5"></label>
 <label>Cuota Over<input id="oddsOver" type="number" step="0.01" min="1.01"></label>
@@ -179,7 +179,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <label>Desc<input id="posDesc"></label>
 <label>Stake (ARS)<input id="posStake" type="number" min="0" step="0.01"></label>
 <label>Resultado<select id="posResult"><option value="open">Abierta</option><option value="won">Ganada</option><option value="lost">Perdida</option><option value="cash">Cash-out</option></select></label>
-<label>P&amp;L (ARS)<input id="posPL" type="number" step="0.01"></label>
+<label>P&L (ARS)<input id="posPL" type="number" step="0.01"></label>
 </div>
 <div class="actions"><button class="primary" id="addPos">Registrar</button><button id="clearPos">Limpiar</button></div>
 <div id="posList" class="small muted">Sin posiciones.</div>
