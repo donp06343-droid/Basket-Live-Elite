@@ -1,12 +1,11 @@
 services:
   - type: web
-    name: basket-live-elite
+    name: basket-live-elite-cloud
     runtime: node
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: "22"
-      - key: PORT
-        value: "10000"
+        value: 22
