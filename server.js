@@ -21,6 +21,7 @@ const columns = db.prepare("PRAGMA table_info(matches)").all().map(c => c.name);
 if (!columns.includes("share_id")) db.exec("ALTER TABLE matches ADD COLUMN share_id TEXT");
 if (!columns.includes("updated_at")) db.exec("ALTER TABLE matches ADD COLUMN updated_at TEXT");
 if (!columns.includes("is_live")) db.exec("ALTER TABLE matches ADD COLUMN is_live INTEGER NOT NULL DEFAULT 0");
+if (!columns.includes("edit_key")) db.exec("ALTER TABLE matches ADD COLUMN edit_key TEXT");
 const oldRows = db.prepare("SELECT id FROM matches WHERE share_id IS NULL OR share_id = ''").all();
 const migrate = db.prepare("UPDATE matches SET share_id=?, updated_at=COALESCE(updated_at,created_at) WHERE id=?");
 for (const row of oldRows) migrate.run(crypto.randomBytes(9).toString("base64url"), row.id);
@@ -61,9 +62,10 @@ app.post("/api/matches", auth, (req, res) => {
   if (!validMatch(p)) return res.status(400).json({ error: "Completá los dos equipos y un marcador válido." });
   const now = new Date().toISOString();
   const shareId = crypto.randomBytes(12).toString("base64url");
-  const info = db.prepare("INSERT INTO matches(created_at,updated_at,payload,share_id,is_live) VALUES(?,?,?,?,1)")
-    .run(now, now, JSON.stringify(p), shareId);
-  res.status(201).json({ id: Number(info.lastInsertRowid), shareId, shareUrl: "/live/" + shareId, updatedAt: now });
+  const editKey = crypto.randomBytes(24).toString("base64url");
+  const info = db.prepare("INSERT INTO matches(created_at,updated_at,payload,share_id,is_live,edit_key) VALUES(?,?,?,?,1,?)")
+    .run(now, now, JSON.stringify(p), shareId, editKey);
+  res.status(201).json({ id: Number(info.lastInsertRowid), shareId, editKey, shareUrl: "/live/" + shareId, updatedAt: now });
 });
 app.get("/api/live/:shareId", (req, res) => {
   const row = db.prepare("SELECT payload,share_id,updated_at,is_live FROM matches WHERE share_id=?").get(req.params.shareId);
@@ -71,6 +73,10 @@ app.get("/api/live/:shareId", (req, res) => {
   res.json(publicMatch(row));
 });
 app.put("/api/live/:shareId", auth, (req, res) => {
+  const owner = db.prepare("SELECT edit_key FROM matches WHERE share_id=?").get(req.params.shareId);
+  if (!owner) return res.status(404).json({ error: "No existe ese partido." });
+  const supplied = req.get("x-edit-key") || "";
+  if (!owner.edit_key || supplied.length !== owner.edit_key.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(owner.edit_key))) return res.status(403).json({ error: "Este navegador no tiene permiso para editar el seguimiento. Creá uno nuevo desde aquí." });
   const p = req.body;
   if (!validMatch(p)) return res.status(400).json({ error: "Marcador o equipos inválidos." });
   const now = new Date().toISOString();
@@ -80,6 +86,10 @@ app.put("/api/live/:shareId", auth, (req, res) => {
   res.json({ ok: true, updatedAt: now });
 });
 app.post("/api/live/:shareId/finish", auth, (req, res) => {
+  const owner = db.prepare("SELECT edit_key FROM matches WHERE share_id=?").get(req.params.shareId);
+  const supplied = req.get("x-edit-key") || "";
+  if (!owner) return res.status(404).json({ error: "Partido no encontrado." });
+  if (!owner.edit_key || supplied.length !== owner.edit_key.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(owner.edit_key))) return res.status(403).json({ error: "No tenés permiso para finalizar este seguimiento." });
   const result = db.prepare("UPDATE matches SET is_live=0,updated_at=? WHERE share_id=?")
     .run(new Date().toISOString(), req.params.shareId);
   if (!result.changes) return res.status(404).json({ error: "Partido no encontrado." });
