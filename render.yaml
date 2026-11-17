@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: basket-live-elite-cloud
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATA_DIR
+        value: /var/data
+      - key: APP_TOKEN
+        generateValue: true
+    disk:
+      name: basket-live-data
+      mountPath: /var/data
+      sizeGB: 1
