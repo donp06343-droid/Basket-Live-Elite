@@ -37,66 +37,68 @@ function auth(req, res, next) {
   next();
 }
 function validMatch(p) {
-  return p && typeof p.teamA === "string" && typeof p.teamB === "string" &&
-    p.teamA.trim().length > 0 && p.teamB.trim().length > 0 &&
-    Number.isFinite(Number(p.ptsA)) && Number.isFinite(Number(p.ptsB)) &&
-    Number(p.ptsA) >= 0 && Number(p.ptsB) >= 0;
+  return p && typeof p.teamA === "string" && typeof p.teamB === "string" && Number.isFinite(+p.ptsA) && Number.isFinite(+p.ptsB);
 }
 function publicMatch(row) {
-  if (!row) return null;
-  return { ...JSON.parse(row.payload), shareId: row.share_id, updatedAt: row.updated_at, isLive: !!row.is_live };
+  const p = JSON.parse(row.payload || "{}");
+  return {
+    teamA: p.teamA, teamB: p.teamB, ptsA: p.ptsA, ptsB: p.ptsB,
+    period: p.period, clock: p.clock, league: p.league, periodLength: p.periodLength,
+    shareId: row.share_id, isLive: !!row.is_live,
+    updatedAt: row.updated_at || row.created_at, createdAt: row.created_at
+  };
 }
 
-app.get("/api/health", (_req, res) => res.json({
-  status: "online",
-  storage: process.env.DATA_DIR ? "persistent-disk-configured" : "local-or-ephemeral",
-  liveSharing: true,
-  timestamp: new Date().toISOString()
-}));
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "online", storage: "local-or-ephemeral", liveSharing: true, timestamp: new Date().toISOString() });
+});
+
 app.get("/api/matches", auth, (_req, res) => {
-  const rows = db.prepare("SELECT id, share_id, created_at, updated_at, is_live, payload FROM matches ORDER BY id DESC LIMIT 100").all();
+  const rows = db.prepare("SELECT * FROM matches ORDER BY id DESC LIMIT 100").all();
   res.json(rows.map(r => ({ id: r.id, ...publicMatch(r), createdAt: r.created_at })));
 });
+
 app.post("/api/matches", auth, (req, res) => {
-  const p = req.body;
-  if (!validMatch(p)) return res.status(400).json({ error: "Completá los dos equipos y un marcador válido." });
+  if (!validMatch(req.body)) return res.status(400).json({ error: "Datos de partido inválidos" });
+  const shareId = crypto.randomBytes(9).toString("base64url");
+  const editKey = crypto.randomBytes(12).toString("base64url");
   const now = new Date().toISOString();
-  const shareId = crypto.randomBytes(12).toString("base64url");
-  const editKey = crypto.randomBytes(24).toString("base64url");
-  const info = db.prepare("INSERT INTO matches(created_at,updated_at,payload,share_id,is_live,edit_key) VALUES(?,?,?,?,1,?)")
-    .run(now, now, JSON.stringify(p), shareId, editKey);
-  res.status(201).json({ id: Number(info.lastInsertRowid), shareId, editKey, shareUrl: "/live/" + shareId, updatedAt: now });
+  const payload = JSON.stringify(req.body);
+  db.prepare("INSERT INTO matches (created_at, updated_at, payload, share_id, is_live, edit_key) VALUES (?,?,?,?,1,?)").run(now, now, payload, shareId, editKey);
+  res.json({ shareId, editKey, ...req.body, isLive: true });
 });
+
 app.get("/api/live/:shareId", (req, res) => {
-  const row = db.prepare("SELECT payload,share_id,updated_at,is_live FROM matches WHERE share_id=?").get(req.params.shareId);
-  if (!row) return res.status(404).json({ error: "No encontramos ese seguimiento. Pedí un enlace nuevo al organizador." });
+  const row = db.prepare("SELECT * FROM matches WHERE share_id = ?").get(req.params.shareId);
+  if (!row) return res.status(404).json({ error: "No encontrado" });
   res.json(publicMatch(row));
 });
+
 app.put("/api/live/:shareId", auth, (req, res) => {
-  const owner = db.prepare("SELECT edit_key FROM matches WHERE share_id=?").get(req.params.shareId);
-  if (!owner) return res.status(404).json({ error: "No existe ese partido." });
-  const supplied = req.get("x-edit-key") || "";
-  const providedKey = Buffer.from(supplied);
-  const expectedKey = Buffer.from(owner.edit_key || "");
-  if (!owner.edit_key || providedKey.length !== expectedKey.length || !crypto.timingSafeEqual(providedKey, expectedKey)) return res.status(403).json({ error: "Este navegador no tiene permiso para editar el seguimiento. Creá uno nuevo desde aquí." });
-  const p = req.body;
-  if (!validMatch(p)) return res.status(400).json({ error: "Marcador o equipos inválidos." });
+  const row = db.prepare("SELECT * FROM matches WHERE share_id = ?").get(req.params.shareId);
+  if (!row) return res.status(404).json({ error: "No encontrado" });
+  if (row.edit_key && req.get("x-edit-key") !== row.edit_key) return res.status(403).json({ error: "Clave de edición inválida" });
+  if (!validMatch(req.body)) return res.status(400).json({ error: "Datos inválidos" });
   const now = new Date().toISOString();
-  const result = db.prepare("UPDATE matches SET payload=?,updated_at=?,is_live=1 WHERE share_id=?")
-    .run(JSON.stringify(p), now, req.params.shareId);
-  if (!result.changes) return res.status(404).json({ error: "No existe ese partido. Creá uno primero." });
-  res.json({ ok: true, updatedAt: now });
+  db.prepare("UPDATE matches SET payload = ?, updated_at = ?, is_live = 1 WHERE share_id = ?").run(JSON.stringify(req.body), now, req.params.shareId);
+  res.json({ ok: true, ...req.body, shareId: req.params.shareId, isLive: true, updatedAt: now });
 });
+
 app.post("/api/live/:shareId/finish", auth, (req, res) => {
-  const owner = db.prepare("SELECT edit_key FROM matches WHERE share_id=?").get(req.params.shareId);
-  const supplied = req.get("x-edit-key") || "";
-  if (!owner) return res.status(404).json({ error: "Partido no encontrado." });
-  if (!owner.edit_key || supplied.length !== owner.edit_key.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(owner.edit_key))) return res.status(403).json({ error: "No tenés permiso para finalizar este seguimiento." });
-  const result = db.prepare("UPDATE matches SET is_live=0,updated_at=? WHERE share_id=?")
-    .run(new Date().toISOString(), req.params.shareId);
-  if (!result.changes) return res.status(404).json({ error: "Partido no encontrado." });
-  res.json({ ok: true });
+  const row = db.prepare("SELECT * FROM matches WHERE share_id = ?").get(req.params.shareId);
+  if (!row) return res.status(404).json({ error: "No encontrado" });
+  if (row.edit_key && req.get("x-edit-key") !== row.edit_key) return res.status(403).json({ error: "Clave de edición inválida" });
+  db.prepare("UPDATE matches SET is_live = 0, updated_at = ? WHERE share_id = ?").run(new Date().toISOString(), req.params.shareId);
+  res.json({ ok: true, isLive: false });
 });
-app.use(express.static(path.join(__dirname, "public")));
+
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith(".js") || filePath.endsWith(".html")) {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+    }
+  }
+}));
 app.get("*", (_req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.listen(PORT, "0.0.0.0", () => console.log(`Basket Live Elite escuchando en ${PORT}`));
+
+app.listen(PORT, () => console.log("Basket Live Elite on :" + PORT));
