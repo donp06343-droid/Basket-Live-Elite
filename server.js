@@ -76,7 +76,9 @@ app.put("/api/live/:shareId", auth, (req, res) => {
   const owner = db.prepare("SELECT edit_key FROM matches WHERE share_id=?").get(req.params.shareId);
   if (!owner) return res.status(404).json({ error: "No existe ese partido." });
   const supplied = req.get("x-edit-key") || "";
-  if (!owner.edit_key || supplied.length !== owner.edit_key.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(owner.edit_key))) return res.status(403).json({ error: "Este navegador no tiene permiso para editar el seguimiento. Creá uno nuevo desde aquí." });
+  const providedKey = Buffer.from(supplied);
+  const expectedKey = Buffer.from(owner.edit_key || "");
+  if (!owner.edit_key || providedKey.length !== expectedKey.length || !crypto.timingSafeEqual(providedKey, expectedKey)) return res.status(403).json({ error: "Este navegador no tiene permiso para editar el seguimiento. Creá uno nuevo desde aquí." });
   const p = req.body;
   if (!validMatch(p)) return res.status(400).json({ error: "Marcador o equipos inválidos." });
   const now = new Date().toISOString();
