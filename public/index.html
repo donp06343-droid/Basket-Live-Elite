@@ -1,8 +1,55 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#08111f"><title>Basket Live Elite v2.1</title>
-<!-- Content truncated for tool call size; the full file from the zip will be used in production. See note. -->
-</head><body><p>Placeholder - full update pending size limits. Please re-upload or use local push for the 50k index.html.</p></body></html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08111f"><title>Basket Live Elite</title>
+<style>
+:root{color-scheme:dark;--bg:#08111f;--panel:#111f33;--panel2:#0b192b;--line:#263b58;--text:#eaf2ff;--muted:#9db0ca;--blue:#2563eb;--cyan:#22d3ee;--green:#34d399;--red:#fb7185}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% -10%,#1d426b 0,transparent 42%),var(--bg);color:var(--text);font:15px system-ui,-apple-system,sans-serif}header{padding:22px max(16px,calc((100vw - 1120px)/2));background:#08111fe8;border-bottom:1px solid var(--line)}h1{font-size:1.5rem;margin:0;letter-spacing:.2px}header p,.muted{color:var(--muted)}header p{margin:5px 0 0}main{max-width:1120px;margin:auto;padding:16px}.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}button{padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#1a2d47;color:var(--text);font-weight:650;cursor:pointer}button:hover{filter:brightness(1.15)}button:disabled{opacity:.5;cursor:wait}.tab.active,button.primary{background:var(--blue);border-color:#3b82f6}.panel{display:none}.panel.active{display:block}.card{background:linear-gradient(160deg,#14243a,var(--panel));border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 10px 30px #0002}h2{font-size:1.05rem;color:#bfdbfe;margin:0 0 12px}h3{font-size:.95rem;color:#dbeafe;margin:14px 0 8px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}label{display:block;color:var(--muted);font-size:.8rem}input,select,textarea{width:100%;padding:10px;margin:4px 0 9px;border:1px solid var(--line);border-radius:9px;background:#071426;color:var(--text);font:inherit}input[type=file]{padding:8px}input[type=number]{font-variant-numeric:tabular-nums}table{width:100%;border-collapse:collapse}td,th{text-align:right;padding:9px;border-bottom:1px solid var(--line)}td:first-child,th:first-child{text-align:left}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:11px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}.metric small{display:block;color:var(--muted);font-size:.75rem}.metric b{font-size:1.15rem}.note{background:#102d48;padding:11px;border-radius:10px;margin:10px 0;color:#c9ddf5}.status{padding:9px 11px;border-radius:9px;background:#0b192b;color:var(--muted);margin:8px 0}.success{color:var(--green)}.danger{color:var(--red)}.match{padding:12px 2px;border-bottom:1px solid var(--line)}.match a,.link{color:#7dd3fc;overflow-wrap:anywhere}.hidden{display:none!important}.scoreboard{display:flex;justify-content:space-around;align-items:center;text-align:center;gap:12px;padding:18px;background:#071426;border:1px solid var(--line);border-radius:14px}.scoreboard strong{font-size:clamp(2rem,8vw,3.5rem);font-variant-numeric:tabular-nums}.scoreboard span{display:block;color:var(--muted)}.vs{color:var(--cyan);font-weight:800}.preview{max-width:100%;max-height:280px;display:block;margin:8px 0;border-radius:10px}.progress{height:7px;background:#263b58;border-radius:8px;overflow:hidden}.progress>i{display:block;height:100%;width:0;background:var(--cyan);transition:width .2s}.small{font-size:.8rem;color:var(--muted)}@media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}.metrics{grid-template-columns:repeat(2,1fr)}main{padding:10px}.card{padding:13px}}
+</style>
+</head>
+<body>
+<header><h1>🏀 Basket Live Elite</h1><p>Marcadores, seguimiento compartido y análisis avanzado de baloncesto</p></header>
+<main>
+<div id="viewer" class="hidden">
+ <div class="card"><div class="actions"><button id="backHome">← Volver a la aplicación</button><span class="status" id="liveStatus">Conectando al seguimiento…</span></div>
+ <div class="scoreboard"><div><span id="vTeamA">Equipo A</span><strong id="vPtsA">0</strong></div><div class="vs">VS</div><div><span id="vTeamB">Equipo B</span><strong id="vPtsB">0</strong></div></div>
+ <p style="text-align:center;font-size:1.1rem" id="vPeriod">Período — · 10:00</p><p class="small" style="text-align:center" id="vUpdated"></p></div>
+ <div class="card"><h2>Estadísticas del encuentro</h2><div id="viewerStats" class="muted">Esperando datos…</div></div>
+</div>
+<div id="app">
+<nav class="tabs"><button class="tab active" data-tab="game">Partido</button><button class="tab" data-tab="capture">Captura inteligente</button><button class="tab" data-tab="pro">Métricas pro</button><button class="tab" data-tab="history">Historial</button><button class="tab" data-tab="server">Servidor</button></nav>
+<section id="game" class="panel active">
+ <div class="card"><h2>🏟️ Marcador y datos del partido</h2><div class="grid">
+ <label>Equipo A<input id="teamA" value="Equipo local" maxlength="45"></label><label>Equipo B<input id="teamB" value="Equipo visitante" maxlength="45"></label>
+ <label>Competición<select id="league"><option value="FIBA">FIBA · 4 × 10 min</option><option value="NBA">NBA · 4 × 12 min</option><option value="CUSTOM">Personalizado</option></select></label>
+ <label>Duración del período (min)<input id="periodLength" type="number" min="1" max="30" value="10"></label>
+ <label>Período<select id="period"><option value="1">1.º</option><option value="2">2.º</option><option value="3">3.º</option><option value="4">4.º</option><option value="OT">Prórroga</option></select></label>
+ <label>Reloj MM:SS<input id="clock" value="10:00" inputmode="numeric" maxlength="5"></label>
+ <label>Puntos A<input id="ptsA" type="number" min="0" max="300" value="0"></label><label>Puntos B<input id="ptsB" type="number" min="0" max="300" value="0"></label>
+ </div><div class="actions"><button class="primary" id="calc">Actualizar análisis</button><button id="save">Guardar / crear enlace en vivo</button><button id="finish" disabled>Finalizar seguimiento</button></div>
+ <div id="shareBox" class="note hidden"><b>🔗 Enlace público del marcador</b><p id="shareUrl" class="link"></p><div class="actions"><button id="copyShare">Copiar enlace</button><button id="nativeShare">Compartir…</button></div><p class="small">Cualquier persona con este enlace puede ver el marcador. Solo vos podés modificarlo desde esta sesión.</p></div>
+ </div>
+ <div class="card"><h2>📊 Estadísticas acumuladas</h2><p class="muted">Ingresá las estadísticas de ambos equipos. Los porcentajes y métricas se recalculan automáticamente.</p><div id="stats"></div><div class="actions"><button class="primary" id="calc2">Calcular métricas</button><button id="reset">Limpiar estadísticas</button></div></div>
+ <div class="card" id="summary"><h2>Resumen del partido</h2><p class="muted">Completá el marcador y calculá las métricas.</p></div>
+</section>
+<section id="capture" class="panel"><div class="card"><h2>📷 Leer captura del marcador</h2><p class="muted">Subí una captura de pantalla del partido. El reconocimiento intenta detectar nombres, puntos, período y reloj; revisá y corregí los campos antes de aplicar.</p>
+ <label>Seleccionar captura (PNG, JPG o WEBP)<input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"></label><img id="preview" class="preview hidden" alt="Vista previa de la captura">
+ <div class="actions"><button id="readImage" class="primary" disabled>Reconocer datos de la captura</button></div><div class="progress"><i id="ocrProgress"></i></div><p id="ocrStatus" class="status">El procesamiento se realiza en tu navegador. La primera carga puede tardar un poco.</p>
+ <label>Texto reconocido (podés corregirlo)<textarea id="ocrText" rows="5" placeholder="Acá aparecerá el texto detectado…"></textarea></label>
+ <div class="grid"><label>Equipo A detectado<input id="ocrTeamA"></label><label>Equipo B detectado<input id="ocrTeamB"></label><label>Puntos A<input id="ocrPtsA" type="number" min="0"></label><label>Puntos B<input id="ocrPtsB" type="number" min="0"></label><label>Período<input id="ocrPeriod" placeholder="1, 2, 3, 4 u OT"></label><label>Reloj<input id="ocrClock" placeholder="MM:SS"></label></div>
+ <div class="actions"><button class="primary" id="applyOCR">Aplicar al partido</button></div><p class="small">La lectura puede equivocarse según el diseño, resolución o idioma de la captura. No se envía ni almacena la imagen en el servidor.</p>
+ </div></section>
+<section id="pro" class="panel"><div class="card"><h2>🏀 Lectura deportiva del partido</h2><div id="sportAnalysis" class="muted">Cargá el marcador y las estadísticas para comparar el rendimiento de ambos equipos.</div><p class="small">Es una lectura descriptiva del juego actual, no una predicción segura del resultado.</p></div><div class="card"><h2>📈 Indicadores avanzados</h2><div id="metrics" class="muted">Calculá un partido para ver las métricas.</div><div class="note">Pace: posesiones estimadas por 48 minutos. ORtg/DRtg: puntos por 100 posesiones. Net Rating: diferencia entre eficiencia ofensiva y defensiva. eFG% pondera el triple; TS% incorpora tiros libres. Four Factors: eFG%, TOV%, ORB% y FTA/FGA. Son estimaciones estadísticas, no predicciones.</div></div></section>
+<section id="history" class="panel"><div class="card"><h2>🗂️ Historial de partidos</h2><div id="historyList">Cargando…</div></div></section>
+<section id="server" class="panel"><div class="card"><h2>☁️ Estado del servidor</h2><p id="status" class="status">Comprobando…</p><label>Token de acceso (solo si configuraste APP_TOKEN en Render)<input id="token" type="password" placeholder="Token del servidor"></label><div class="actions"><button id="saveToken">Guardar token</button><button id="check">Probar conexión</button></div><div class="note">Para conservar el historial tras reinicios o despliegues, el servicio necesita almacenamiento persistente. En el plan gratuito de Render el disco persistente no está incluido; el almacenamiento local puede reiniciarse. El seguimiento compartido funciona mientras la instancia y su base de datos estén disponibles.</div><p class="small">Los marcadores automáticos desde una transmisión o proveedor deportivo no están incluidos: esta versión permite actualizar el marcador manualmente y compartirlo en vivo.</p></div></section>
+</div></main>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"></script>
+<script src="/model.js"></script>
+<script>
+// Restored base UI - full v2.1 script from zip should be pushed for complete Kelly/OCR/model features.
+const $=id=>document.getElementById(id);
+alert("Versión base restaurada. El modelo probabilístico (model.js) ya está en el repo. Para la UI completa de v2.1 subí el index.html del zip desde tu máquina o pedime que lo intente de nuevo.");
+</script>
+</body>
+</html>
