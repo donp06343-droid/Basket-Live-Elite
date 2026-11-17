@@ -1,37 +1,37 @@
-# Basket Live Elite Cloud
+# Basket Live Elite
 
-Plataforma de análisis estadístico de baloncesto, sin funciones de apuestas.
+Plataforma de seguimiento y análisis estadístico de baloncesto. No incluye funciones de apuestas.
 
-## Incluye
-- Interfaz adaptable a celular y PC.
-- Registro de marcador y box score por equipo.
-- Posesiones estimadas: FGA - ORB + TOV + 0.44 × FTA.
-- Pace normalizado a 48 minutos.
-- ORtg, DRtg y Net Rating.
-- eFG%, TS%, FG%, 3P%, FT%, TOV%, ORB%, FTA/FGA y AST/TO.
-- Four Factors y comparación de equipos.
-- API Express y base SQLite.
-- Persistencia preparada para disco de Render.
+## Funciones
+- Diseño adaptable a PC y celular.
+- Marcador manual con equipos, competición, período y reloj (FIBA, NBA o duración personalizada).
+- Captura de pantalla con OCR en el navegador para intentar reconocer nombres, puntos, período y reloj. La lectura debe revisarse antes de aplicarla.
+- La imagen se procesa en el navegador con Tesseract.js y no se carga a la API de este proyecto.
+- Box score para ambos equipos: FGA, FGM, triples, libres, rebotes, pérdidas, asistencias, robos y tapones.
+- Métricas: posesiones estimadas, Pace, ORtg, DRtg, Net Rating, eFG%, TS%, FG%, 3P%, FT%, TOV%, ORB%, FTA/FGA, AST/TO y Four Factors.
+- Historial de partidos en SQLite.
+- Enlaces públicos de solo lectura para seguir un marcador desde otro teléfono o PC; la vista se actualiza cada cinco segundos.
+- Clave privada por partido para que solo el navegador que lo creó pueda modificarlo o finalizarlo.
 
 ## Ejecutar localmente
-Requiere Node.js 20 o superior:
+Requiere Node.js 22:
 ```bash
 npm install
 npm start
 ```
-Abre http://localhost:3000
+Abrí http://localhost:3000
 
 ## Publicar en Render
-1. En Render elige **New > Blueprint** y conecta este repositorio.
-2. Render leerá `render.yaml` y mostrará el servicio y disco persistente.
-3. Revisa el costo antes de confirmar: el blueprint usa un servicio Starter y un disco persistente.
-4. Tras desplegar, abre la URL `.onrender.com`.
-5. Copia el valor generado de `APP_TOKEN` desde Render y pégalo en la pestaña **Servidor**.
+El archivo `render.yaml` configura un servicio gratuito. Conectá el repositorio en Render mediante **New > Blueprint** y seguí los pasos de publicación. La URL pública se muestra en el panel del servicio.
 
-## Datos en vivo
-El servidor seguirá disponible con tu PC apagada. Esta versión no incluye proveedor de marcadores en vivo: el puente Tampermonkey y el OCR local de Ollama dependían de tu PC. Para automatizar resultados desde la nube se necesita una API deportiva autorizada y configurar su integración.
+## Importante sobre el plan gratuito
+El servicio gratuito puede entrar en reposo y el sistema de archivos local puede ser temporal. Por eso, el historial SQLite y los partidos guardados pueden perderse después de reinicios o nuevos despliegues. Para conservar datos de forma fiable hace falta almacenamiento persistente, que no está incluido en el servicio gratuito.
 
-## Seguridad
-- Mantén privado el valor de `APP_TOKEN`.
-- No publiques claves ni tokens en GitHub.
-- No introduzcas datos personales sensibles.
+## Límites del seguimiento
+El enlace compartido muestra los datos que carga la persona que creó el partido; no obtiene automáticamente el marcador desde una transmisión. Los marcadores automáticos requieren integrar un proveedor deportivo autorizado y compatible. El OCR puede confundir caracteres y números según la calidad y el diseño de la captura.
+
+## Seguridad y privacidad
+- El enlace público permite consultar el marcador y las estadísticas de ese partido.
+- La clave privada de edición se guarda en el navegador que creó el partido.
+- Si configurás `APP_TOKEN` en el entorno del servidor, las operaciones de escritura también requieren ese token.
+- No subas tokens, contraseñas ni datos personales a GitHub.
