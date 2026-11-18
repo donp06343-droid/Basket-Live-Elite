@@ -1,8 +1,8 @@
 {
   "name": "basket-live-elite-cloud",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "private": true,
-  "description": "Análisis en vivo, OCR de casas de apuestas, seguimiento autónomo, Kelly y cash-out",
+  "description": "Pronóstico profesional en vivo, OCR, seguimiento autónomo, Kelly y cash-out",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
