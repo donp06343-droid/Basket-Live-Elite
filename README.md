@@ -1,42 +1,23 @@
-# Basket Live Elite v2.2
+# Basket Live Elite v2.5
 
-Plataforma de seguimiento, estadísticas avanzadas y análisis de baloncesto con gestión de bankroll (Criterio de Kelly **conservador**).
+Herramienta **educativa** de análisis en vivo (básquet y multi-deporte base), OCR de capturas de casas de apuestas, seguimiento autónomo, Kelly conservador y cash-out.
 
-> Herramienta **educativa**. No es consejo financiero ni de apuestas. Apostá con responsabilidad y cumplí la ley de tu jurisdicción.
+**No es consejo de apuestas.** Gestioná riesgo y bankroll con responsabilidad.
 
 ## Qué incluye
 
-### Marcador y métricas
-- Diseño adaptable PC / celular
-- Box score completo + Pace, ORtg, DRtg, Net, eFG%, TS%, Four Factors
+| Pieza | Descripción |
+|--------|-------------|
+| **OCR** | Multi-pase + diccionario clubes AR + detección marcador/reloj/período/líneas |
+| **Modelo** | Proyección bayesiana, Over/Under, P(gana), filtros conservadores, cash-out |
+| **Seguimiento vivo** | Cada 20 s: API (SportScore + API-Sports) + share propio + notificaciones |
+| **SportScore** | API gratis sin key (attribution requerida) |
+| **API-Sports** | Opcional vía `API_SPORTS_KEY` en Render (100 req/día free) |
+| **Asistente** | Tips de reglas abiertas (sin IA de pago) |
+| **Kelly ARS** | ¼ Kelly, tope 2.5% bankroll, pesos argentinos |
+| **Screen share** | OCR periódico de pantalla + auto-modelo |
 
-### OCR para casas de apuestas
-- Capturas tipo Bet365 / apps AR: detecta equipos, marcador (`38 : 30`), *time elapsed*, período, líneas Over/Under
-- Al aplicar → corre el modelo automáticamente
-
-### Screen share
-- Compartí pestaña/ventana del scoreboard
-- OCR periódico + actualización de marcador + modelo
-
-### Modelo probabilístico v2.2 (conservador)
-- Proyección bayesiana del total
-- P(Over/Under) y P(ganador) con mezcla modelo/mercado
-- Filtros estrictos: ≥8 min jugados, EV ≥5%, edge ≥3.5 pp, cuota ≥1.25
-- Stake máximo **2.5%** del bankroll · máximo **¼ Kelly**
-- Acciones: **ENTRAR / HOLD / NO ENTRAR / CASH-OUT**
-- Cash-out cuando el edge se cae o el marcador se da vuelta
-- Alertas de ritmo (acelera/frena)
-
-### Seguimiento vivo + notificaciones
-- Botón **Seguir vivo + avisos**
-- Re-análisis cada 20 s
-- Notificaciones del navegador al cambiar la acción (sobre todo CASH-OUT)
-
-### Live links
-- Enlace público de solo lectura
-- Clave de edición local por partido
-
-## Correr local
+## Uso local
 
 ```bash
 npm install
@@ -45,23 +26,31 @@ npm start
 npm test
 ```
 
-Requiere **Node.js 22**.
+## Deploy (Render)
 
-## Deploy en Render
+1. New → Blueprint → conectá este repo (`render.yaml`).
+2. (Opcional) Environment: `API_SPORTS_KEY` = tu key de api-sports.io.
+3. Tras el deploy: hard refresh (`Ctrl+Shift+R`).
 
-Conectá el repo con **New → Blueprint** (`render.yaml`).
+## Flujo recomendado
 
-En plan free el disco puede ser temporal.
+1. Subí captura → **Reconocer** → **Aplicar + modelo**.
+2. Se activa el **seguimiento vivo** (SportScore/API + re-análisis cada 20 s).
+3. Activá notificaciones del navegador para CASH-OUT / cambio de edge.
+4. Revisá **Asistente** y **Kelly**.
 
-## Filosofía de riesgo
+## Limitaciones honestas
 
-- Menos stake, más reflexión
-- No forzar entradas con poco sample
-- Preferir **HOLD / NO ENTRAR / CASH-OUT** cuando el edge no es claro
-- El objetivo es **proteger bankroll**, no maximizar apuestas
+- OCR de UIs oscuras no es 100% perfecto.
+- APIs free no cubren todas las ligas locales AR en vivo.
+- SofaScore/Flashscore no se scrapean (CORS); hay links de búsqueda.
+- Notificaciones = Web Notifications (no push nativo).
+- **Ningún modelo elimina el riesgo de perder.**
 
-## Seguridad
+## Attribution
 
-- El enlace público solo consulta
-- La clave de edición queda en el navegador creador
-- `APP_TOKEN` opcional en el entorno para escrituras
+Live scores: [Powered by SportScore](https://sportscore.com/).
+
+## Licencia
+
+Proyecto personal educativo. Usá bajo tu propia responsabilidad.
