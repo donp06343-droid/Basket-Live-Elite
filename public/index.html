@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08111f">
-<title>Basket Live Elite v2.4</title>
+<title>Basket Live Elite v2.6</title>
 <style>
 :root{color-scheme:dark;--bg:#08111f;--panel:#111f33;--panel2:#0b192b;--line:#263b58;--text:#eaf2ff;--muted:#9db0ca;--blue:#2563eb;--cyan:#22d3ee;--green:#34d399;--red:#fb7185;--amber:#fbbf24}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% -10%,#1d426b 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
@@ -52,8 +52,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 </head>
 <body>
 <header>
-<h1>🏀 Basket Live Elite <span class="small" style="color:var(--cyan);font-weight:500">v2.4</span></h1>
-<p>Marcador · OCR casas · Screen share · Kelly conservador (ARS) · Cash-out · Avisos en vivo · Multi-deporte</p>
+<h1>🏀 Basket Live Elite <span class="small" style="color:var(--cyan);font-weight:500">v2.6</span></h1>
+<p>Marcador · OCR casas · Screen share · Kelly · Cash-out · Seguimiento vivo · Multi-deporte</p>
 </header>
 <main>
 <div id="viewer" class="hidden">
@@ -118,7 +118,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <section id="capture" class="panel">
 <div class="card">
 <h2>📷 OCR (casas de apuestas · multi-deporte)</h2>
-<p class="muted">Subí captura del marcador vivo (basket, fútbol, etc.). Prioriza la zona superior del scoreboard. Detecta equipos, puntos, tiempo, período y líneas Over/Under. Después de aplicar se activa el seguimiento vivo si hay link.</p>
+<p class="muted">Subí captura del marcador vivo. Detecta equipos, puntos, tiempo, período y líneas. Al aplicar: modelo + seguimiento vivo automático.</p>
 <label>Imagen<input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp"></label>
 <img id="preview" class="preview hidden" alt="">
 <div class="actions"><button id="readImage" class="primary" disabled>Reconocer</button></div>
@@ -139,7 +139,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <section id="video" class="panel">
 <div class="card">
 <h2>🖥️ Screen share</h2>
-<p class="muted">OCR periódico del scoreboard. Nada se sube al servidor.</p>
+<p class="muted">OCR periódico del scoreboard en pantalla.</p>
 <div class="actions"><button class="primary" id="startShare">Compartir</button><button id="stopShare" disabled>Detener</button></div>
 <video id="screenVideo" class="preview hidden" muted playsinline></video>
 <canvas id="frameCanvas" class="hidden"></canvas>
@@ -150,7 +150,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <section id="analysis" class="panel">
 <div class="card"><h2>📈 Métricas</h2><div id="metrics" class="muted">Calculá un partido.</div></div>
 <div class="card">
-<h2>🧠 Modelo v2.4</h2>
+<h2>🧠 Modelo v2.6</h2>
 <div class="grid">
 <label>Línea total<input id="lineTotal" type="number" step="0.5" placeholder="125.5"></label>
 <label>Cuota Over<input id="oddsOver" type="number" step="0.01" min="1.01"></label>
@@ -160,15 +160,22 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <label>PRE A<input id="preA" type="number" step="0.01" min="1.01"></label>
 <label>PRE B<input id="preB" type="number" step="0.01" min="1.01"></label>
 </div>
-<div class="actions"><button class="primary" id="runModel">Correr modelo</button></div>
+<div class="actions"><button class="primary" id="runModel">Correr modelo</button>
+<button type="button" id="btnLiveScores">🔍 Buscar marcador en API (vivo)</button></div>
+<div id="liveScoresBox" style="margin-top:8px"></div>
 <div id="modelOut" class="note">Cargá marcador + cuotas.</div>
 <div id="paceAlert" class="status hidden"></div>
+<div class="card" style="margin-top:10px">
+<h2>🤖 Asistente</h2>
+<p class="small muted">Tips según marcador, proyección y acción del modelo.</p>
+<div id="assistantBox" class="note">Corré el modelo para ver tips.</div>
+</div>
 </div>
 </section>
 <section id="kelly" class="panel">
 <div class="card">
-<h2>💰 Kelly & Bankroll (ARS)</h2>
-<p class="note">Educativo · montos en pesos argentinos (ARS) · máx 2.5% del bankroll · ¼ Kelly · cash-out si el edge se cae.</p>
+<h2>💰 Kelly & Bankroll</h2>
+<p class="note">Montos en pesos argentinos (ARS) · máx 2.5% del bankroll · ¼ Kelly · cash-out si el edge se cae.</p>
 <div class="grid">
 <label>Bankroll (ARS)<input id="bankroll" type="number" min="0" value="100000"></label>
 <label>Fracción<select id="kellyFrac"><option value="0.25">¼ Kelly</option><option value="0.5">½</option><option value="0.15">0.15 (ultra safe)</option></select></label>
@@ -195,6 +202,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 </div>
 </section>
 </div>
+<p class="small" style="text-align:center;margin:16px 0 8px"><a href="https://sportscore.com/" rel="dofollow" target="_blank" style="color:#7dd3fc">Powered by SportScore</a> · datos de scores en vivo</p>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="/model.js"></script>
