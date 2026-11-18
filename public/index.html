@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#08111f">
-<title>Basket Live Elite v2.6</title>
+<title>Basket Live Elite v2.8</title>
 <style>
 :root{color-scheme:dark;--bg:#08111f;--panel:#111f33;--panel2:#0b192b;--line:#263b58;--text:#eaf2ff;--muted:#9db0ca;--blue:#2563eb;--cyan:#22d3ee;--green:#34d399;--red:#fb7185;--amber:#fbbf24}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 20% -10%,#1d426b 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.45 system-ui,sans-serif}
@@ -52,8 +52,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 </head>
 <body>
 <header>
-<h1>🏀 Basket Live Elite <span class="small" style="color:var(--cyan);font-weight:500">v2.6</span></h1>
-<p>Marcador · OCR casas · Screen share · Kelly · Cash-out · Seguimiento vivo · Multi-deporte</p>
+<h1>🏀 Basket Live Elite <span class="small" style="color:var(--cyan);font-weight:500">v2.8</span></h1>
+<p>Marcador · OCR casas · Screen share · Kelly · Cash-out · Seguimiento vivo · Multi-deporte · Moneyline</p>
 </header>
 <main>
 <div id="viewer" class="hidden">
@@ -150,7 +150,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <section id="analysis" class="panel">
 <div class="card"><h2>📈 Métricas</h2><div id="metrics" class="muted">Calculá un partido.</div></div>
 <div class="card">
-<h2>🧠 Modelo v2.6</h2>
+<h2>🧠 Modelo v2.8</h2>
 <div class="grid">
 <label>Línea total<input id="lineTotal" type="number" step="0.5" placeholder="125.5"></label>
 <label>Cuota Over<input id="oddsOver" type="number" step="0.01" min="1.01"></label>
@@ -166,9 +166,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid #22d3ee88;border-color
 <div id="modelOut" class="note">Cargá marcador + cuotas.</div>
 <div id="paceAlert" class="status hidden"></div>
 <div class="card" style="margin-top:10px">
-<h2>🤖 Asistente</h2>
-<p class="small muted">Tips según marcador, proyección y acción del modelo.</p>
-<div id="assistantBox" class="note">Corré el modelo para ver tips.</div>
+<h2>🤖 Asistente IA operativo</h2>
+<p class="small muted">Tips de entrada, cash-out, ritmo y riesgo según el marcador y el modelo.</p>
+<div id="assistantBox" class="note"><b>Asistente listo.</b> Corré el modelo o actualizá el marcador: tips en vivo.</div>
 </div>
 </div>
 </section>
