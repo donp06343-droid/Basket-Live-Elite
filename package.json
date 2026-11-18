@@ -1,8 +1,8 @@
 {
   "name": "basket-live-elite-cloud",
-  "version": "2.7.0",
+  "version": "2.8.0",
   "private": true,
-  "description": "Pronóstico profesional en vivo, OCR, seguimiento autónomo, Kelly y cash-out",
+  "description": "Pronóstico profesional en vivo, forma por API, moneyline live, OCR, Kelly",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
