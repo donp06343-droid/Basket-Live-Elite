@@ -1,8 +1,8 @@
 {
   "name": "basket-live-elite-cloud",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
-  "description": "Estadísticas avanzadas de baloncesto, análisis en vivo, OCR, seguimiento por pantalla y Criterio de Kelly (educativo)",
+  "description": "Análisis en vivo, OCR de casas de apuestas, seguimiento autónomo, Kelly y cash-out",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
